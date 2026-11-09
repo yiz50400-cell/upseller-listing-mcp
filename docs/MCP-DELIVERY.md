@@ -49,7 +49,7 @@ Windows / macOS 使用**同一份**交付包（源码 + package-lock）。安装
 | 现象 | 处理 |
 |---|---|
 | `doctor` 报依赖缺失 | 在交付根目录重跑对应系统的 `install-mcp`；确认能访问 npm 源完成 `npm ci`。 |
-| `doctor` 报凭证缺失 | 编辑本机 `mcp/.env` 填入非空 `UPSELLER_COOKIE` / `UPSELLER_DEVICE_ID`，勿提交该文件。 |
+| `doctor` 报凭证缺失 | 推荐对 Codex 调用 `upseller_login`，或运行 Mac `sh scripts/login-upseller.sh` / Windows `scripts\login-upseller.cmd`，浏览器登录后自动写入本机 `mcp/.env`；也可手工编辑填入非空 `UPSELLER_COOKIE` / `UPSELLER_DEVICE_ID`。勿提交或外传该文件。 |
 | 宿主找不到命令 | 使用 `config` 生成的**本机** Node 绝对路径与 `scripts/launch.mjs` 绝对路径，不要手写他人路径。 |
 | 代理相关报错 | 未用代理则设 `NODE_USE_ENV_PROXY=0` 或去掉代理变量；需要代理时换支持 `--use-env-proxy` 的 Node。 |
 | 中文/空格路径 | 支持；保持整包目录完整，勿拆散。 |

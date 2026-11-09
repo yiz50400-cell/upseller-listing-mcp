@@ -1,11 +1,11 @@
 {
   "name": "upseller-listing-mcp",
   "version": "0.3.0",
-  "createdAt": "2026-11-09T02:27:29.795Z",
+  "createdAt": "2026-11-09T02:31:44.330Z",
   "files": [
     {
       "path": "README.md",
-      "sha256": "39bd524f0fb9077aa2b9b09cbaa817d6d9a3443ba1553f910f9275fb97e2e6ae"
+      "sha256": "8ab8abb05ae37e0ff8cabf1fd87a60783b8d38b2677e9b4b3a9cebad0a0f053e"
     },
     {
       "path": "docs/BATCH-CAPACITY.md",
@@ -13,7 +13,7 @@
     },
     {
       "path": "docs/MCP-DELIVERY.md",
-      "sha256": "39bd524f0fb9077aa2b9b09cbaa817d6d9a3443ba1553f910f9275fb97e2e6ae"
+      "sha256": "8ab8abb05ae37e0ff8cabf1fd87a60783b8d38b2677e9b4b3a9cebad0a0f053e"
     },
     {
       "path": "mcp/.env.example",
