@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * UpSeller HTTP MCP server (path A) — stdio.
- * Tools: upseller_get_draft, upseller_save_draft, upseller_upload_media, upseller_set_images.
+ * Tools: upseller_login, upseller_run_batch, upseller_run_listing, upseller_get_draft, upseller_save_draft, upseller_upload_media, upseller_set_images.
  * Auth: env UPSELLER_COOKIE / UPSELLER_DEVICE_ID (vault: upseller.cookie / upseller.deviceId).
  * Never logs secret values. Legacy save tools remain draft-only; the runner requires explicit publication confirmation.
  */
@@ -23,8 +23,10 @@ import { setImagesToolSchema, upsellerSetImages } from "./tools/set_images.js";
 
 import { runListingToolSchema, upsellerRunListing } from './tools/run_listing.js';
 import { runBatchToolSchema, upsellerRunBatch } from './tools/run_batch.js';
+import { loginToolSchema, upsellerLogin } from './tools/login.js';
 
 const TOOLS = [
+  loginToolSchema,
   runBatchToolSchema,
   runListingToolSchema,
   getDraftToolSchema,
@@ -57,6 +59,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request, extra) => {
   const name = request.params.name;
   const args = request.params.arguments || {};
   try {
+    if (name === "upseller_login") {
+      const out = await upsellerLogin(args, { signal: extra?.signal });
+      return textResult({ ...out, rev: REV }, !out.ok);
+    }
     const client = getClient();
     switch (name) {
       case "upseller_run_batch": {

@@ -26,7 +26,7 @@ test('MCP launcher keeps stdio clean even when installed in a Unicode directory 
   fs.symlinkSync(path.resolve('node_modules'),path.join(dir,'node_modules'),process.platform==='win32'?'junction':'dir');
   const transport=new StdioClientTransport({command:process.execPath,args:[path.join(dir,'scripts/launch.mjs'),'mcp'],env:{PATH:process.env.PATH,UPSELLER_COOKIE:'',UPSELLER_DEVICE_ID:'',NODE_USE_ENV_PROXY:'0'},stderr:'pipe'});
   const client=new Client({name:'portable-launch-smoke',version:'1.0'},{capabilities:{}});
-  try{await client.connect(transport);const list=await client.listTools();assert.equal(list.tools.length,6);const r=await client.callTool({name:'upseller_get_draft',arguments:{draftId:'1'}});assert.equal(r.isError,true);assert.match(r.content[0].text,/Missing Cookie/);}finally{await client.close();}
+  try{await client.connect(transport);const list=await client.listTools();assert.equal(list.tools.length,7);const r=await client.callTool({name:'upseller_get_draft',arguments:{draftId:'1'}});assert.equal(r.isError,true);assert.match(r.content[0].text,/Missing Cookie/);}finally{await client.close();}
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
 });
 test('release builder exports only allowlisted files with matching checksums',async()=>{

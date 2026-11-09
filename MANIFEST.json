@@ -1,11 +1,11 @@
 {
   "name": "upseller-listing-mcp",
   "version": "0.3.0",
-  "createdAt": "2026-11-09T02:18:47.991Z",
+  "createdAt": "2026-11-09T02:27:29.795Z",
   "files": [
     {
       "path": "README.md",
-      "sha256": "5d2a9ea1290537221f23b4b323b40f08557df79af87e40dcf0fa63ed46f3feb5"
+      "sha256": "39bd524f0fb9077aa2b9b09cbaa817d6d9a3443ba1553f910f9275fb97e2e6ae"
     },
     {
       "path": "docs/BATCH-CAPACITY.md",
@@ -13,7 +13,7 @@
     },
     {
       "path": "docs/MCP-DELIVERY.md",
-      "sha256": "5d2a9ea1290537221f23b4b323b40f08557df79af87e40dcf0fa63ed46f3feb5"
+      "sha256": "39bd524f0fb9077aa2b9b09cbaa817d6d9a3443ba1553f910f9275fb97e2e6ae"
     },
     {
       "path": "mcp/.env.example",
@@ -21,7 +21,15 @@
     },
     {
       "path": "mcp/README.md",
-      "sha256": "df4851f7250d6fd16f46e2f55b6fe2c569dba950cda0d8d61e888d71e8bea0da"
+      "sha256": "fc40dc1f57ce554af91e88897c44bdf62480cc2e710da4e85b1d6abc9e322651"
+    },
+    {
+      "path": "mcp/src/auth/playwright_capture.js",
+      "sha256": "cd09cdff26e66abea282101a4a29c470a27aa1c20d88b706024cb78e62399344"
+    },
+    {
+      "path": "mcp/src/auth/session_env.js",
+      "sha256": "4f4876fcbc863a23a19309187dacf83615c7dd608f59f995fdd09b977c2f59a7"
     },
     {
       "path": "mcp/src/cli.js",
@@ -77,7 +85,7 @@
     },
     {
       "path": "mcp/src/server.js",
-      "sha256": "301d6df3dbd50ee5c62db6925c9f53a2e38c37459505b72a110718349f1b046c"
+      "sha256": "001338e3bb1b4da40442db0f2091464b8f700d6a1043b83d856248feddb8c602"
     },
     {
       "path": "mcp/src/task_import.js",
@@ -90,6 +98,10 @@
     {
       "path": "mcp/src/tools/get_draft.js",
       "sha256": "ed129859cfef231efef3a0133f4b82773925655c343533a6e7a03ad0ebe1446b"
+    },
+    {
+      "path": "mcp/src/tools/login.js",
+      "sha256": "9563b2cac6f93d169706b57d278808098fa217d6a53e44c5e0a36fe3b17d1853"
     },
     {
       "path": "mcp/src/tools/run_batch.js",
@@ -125,11 +137,15 @@
     },
     {
       "path": "mcp/test/deployment.test.js",
-      "sha256": "99e2295deab842d9e293162e16a2f9548233dcde0f91c7b5425f09e1ea803f70"
+      "sha256": "7c911dfb9a16d7f69e52c827d0821e1e9e484ed06b58f31074c1f451cf564ed5"
+    },
+    {
+      "path": "mcp/test/login.test.js",
+      "sha256": "deb83175ae43657325c9a43410bbe0a023071185a39a29400fb09e4d2d4ee953"
     },
     {
       "path": "mcp/test/mcp-smoke.test.js",
-      "sha256": "53d2a956698204ac0a7946172ba6964cbbd05c03867824217cf43db1c54b423d"
+      "sha256": "96905241f095a530b41816f24157f143bf9ce370570c1908efd509fece9a4bfd"
     },
     {
       "path": "mcp/test/original-image-upload.test.js",
@@ -137,15 +153,15 @@
     },
     {
       "path": "package-lock.json",
-      "sha256": "d777a220afb14957202dc9d19ae88baa01c15dd1aba635304a99ee69482d547f"
+      "sha256": "85bbe34b5a3ad984bdaf4cd2082bac12219defe7a3ea9fb6ee514223f16d2238"
     },
     {
       "path": "package.json",
-      "sha256": "244d2d4edd0f7cb1c4d93b9a77f683b4a65aa5b1f8abb6bc63d980db6d850918"
+      "sha256": "bec76fd6b9fe0e52c889a6d1bf9dd9b9140be94cd8e6682ff41237778544b139"
     },
     {
       "path": "scripts/build-mcp-release.mjs",
-      "sha256": "206a15c3a63d83c7bb37a853a1ace5229b6629302a8aca7a48ff6a35d1b80940"
+      "sha256": "bcd7fc1d18e24b9ef68334036ad1936c247538de1758defc51f1a4557a161f4b"
     },
     {
       "path": "scripts/check-mcp.cmd",
@@ -157,15 +173,15 @@
     },
     {
       "path": "scripts/check-syntax.mjs",
-      "sha256": "7db64594006daca308480bfab08d19f4e59c4351e17cd14ade4968b2fbd9e793"
+      "sha256": "be3a5d2b63125b01666703bd92eb891a4669fd0bead94f523078d260ce424310"
     },
     {
       "path": "scripts/install-mcp.cmd",
-      "sha256": "c67dfc3f462198f10e7d819921b4133cd743ee7055cf630c01976ade93b84b83"
+      "sha256": "890d1c9b524d1996c327518fcc3ee9f20fe9b3586c8029aa550ddb75ee725520"
     },
     {
       "path": "scripts/install-mcp.sh",
-      "sha256": "4c9fe048225a230ef9368d64fb3d3bc698a587497c46305c7b07c0d67e5a8396"
+      "sha256": "b2e1a87fdd2d043b6c9f68679999f859c9b0f55ab0f4769e7a013a44f3f381b0"
     },
     {
       "path": "scripts/launch.mjs",
@@ -182,6 +198,18 @@
     {
       "path": "scripts/listing.sh",
       "sha256": "a13526854b6cb151b88be10f812ec5aba95c2c06bbf40b6a298d98ae1f7348b9"
+    },
+    {
+      "path": "scripts/login-upseller.cmd",
+      "sha256": "964049894845ae26b2fbe06ad241c3c4ab8945cb1c16444b12ab5c3cd8df75eb"
+    },
+    {
+      "path": "scripts/login-upseller.mjs",
+      "sha256": "d5e105dbc6a4138a77d74ea34e3dddb638d269be9b8a67f6454fb1d97a16b574"
+    },
+    {
+      "path": "scripts/login-upseller.sh",
+      "sha256": "920cbbbc54f1d8f9432d784ae9e72f6e40a54e5c5d8e401669c08933a4e0edea"
     },
     {
       "path": "scripts/pack-mcp-zip.mjs",

@@ -1,10 +1,10 @@
 # UpSeller HTTP MCP
 
-现有 stdio MCP，直接调用 HTTP，不通过浏览器自动化。客户部署请使用根目录 docs/MCP-DELIVERY.md。
+现有 stdio MCP：业务上架走 HTTP API。登录可用 upseller_login 打开本机浏览器写入 mcp/.env（非业务自动化）。客户部署见根目录 docs/MCP-DELIVERY.md。
 
 ## 入口
 
-从交付目录安装依赖并填写 mcp/.env：
+从交付目录安装依赖；推荐 upseller_login / scripts/login-upseller 写入 mcp/.env：
 
     node scripts/launch.mjs doctor
     node scripts/launch.mjs config
@@ -14,7 +14,9 @@
 环境变量：UPSELLER_COOKIE、UPSELLER_DEVICE_ID，及可选 UPSELLER_SAVE_OP=1。不得把值写到聊天、日志、样例或交付包。
 配置由 config 命令生成（同时给出 Claude 用 mcpServers JSON 与 Codex 用 mcp_servers TOML）；Cursor 非强制。不依赖所有宿主都支持环境变量占位符展开。客户须在本机生成配置，勿复用他人绝对路径。
 
-## 六个工具
+## 工具
+
+- upseller_login：本机浏览器登录 Upseller 并写入 mcp/.env；成功只回 cookieLen/deviceIdLen。
 
 - upseller_run_batch：任务表批量入口，商品并发默认 8、可设 1–8（固定分批：≤8 一批全开；>8 按 8、8、余数，上一批全部完成才启动下一批；显式更低时同为固定分批大小）；整批图片上传共用默认 3 路，发布确认与回执防重同单品入口。8 是保护性配置上限，不是平台承载上限；实测范围见 docs/BATCH-CAPACITY.md。
 - upseller_run_listing：连续处理入口。默认预览；dryRun=false 才执行，task.publish=true 与 confirmPublish=true 同时成立才发布；稳定 taskId 用于回执恢复与防重。

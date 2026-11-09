@@ -11,7 +11,7 @@ Windows / macOS 使用**同一份**交付包（源码 + package-lock）。安装
 ### macOS
 
 1. 安装：在解压后的交付目录执行 `sh scripts/install-mcp.sh`（内部为 `npm ci --omit=dev --ignore-scripts --no-audit --no-fund`，缺失时从样例生成 `mcp/.env`，不覆盖已有凭证）。
-2. 凭据：本机编辑 `mcp/.env`，填写 `UPSELLER_COOKIE` 与 `UPSELLER_DEVICE_ID`；`chmod 600 mcp/.env`。勿把值发到聊天或工单。
+2. 凭据（推荐）：对 Codex 说「登录 Upseller」调用 `upseller_login`，或运行 `sh scripts/login-upseller.sh`，在弹出浏览器登录后自动写入本机 `mcp/.env`。也可手工编辑 `mcp/.env`；`chmod 600 mcp/.env`。勿把值发到聊天或工单。
 3. 自检：`sh scripts/check-mcp.sh` 或 `node scripts/launch.mjs doctor`（只查依赖/运行时/凭证是否非空，不验证登录或网络，不打印凭证值）。
 4. 配置宿主：`node scripts/launch.mjs config`（见下节）。必须在**客户自己的机器**上生成；不要使用他人机器上的绝对路径。
 5. 启动 MCP：`sh scripts/run-mcp.sh` 或 `node scripts/launch.mjs mcp`。标准输出仅用于 MCP 协议。
@@ -20,13 +20,19 @@ Windows / macOS 使用**同一份**交付包（源码 + package-lock）。安装
 ### Windows
 
 1. 安装：在「命令提示符」进入交付目录，执行 `scripts\install-mcp.cmd`（同样 `npm ci` 锁定依赖；缺失时复制 `mcp\.env.example` → `mcp\.env`，不覆盖已有文件）。
-2. 凭据：本机编辑 `mcp\.env`，填写 `UPSELLER_COOKIE` 与 `UPSELLER_DEVICE_ID`；用当前 Windows 账号 ACL 保护该目录/文件。勿把值发到聊天或工单。
+2. 凭据（推荐）：对 Codex 说「登录 Upseller」或运行 `scripts\login-upseller.cmd`，浏览器登录后自动写入本机 `mcp\.env`。也可手工编辑；用当前 Windows 账号 ACL 保护。勿把值发到聊天或工单。
 3. 自检：`scripts\check-mcp.cmd` 或 `node scripts\launch.mjs doctor`。
 4. 配置宿主：`node scripts\launch.mjs config`（必须在客户本机生成）。
 5. 启动 MCP：`scripts\run-mcp.cmd` 或 `node scripts\launch.mjs mcp`。
 6. CLI：`scripts\listing.cmd --file tasks.json`。
 
 安装脚本不会执行业务请求或修改商品。启动器默认读取交付目录的 `mcp/.env`，与宿主工作目录无关；可用 `UPSELLER_ENV_FILE` 指向另一本机配置文件。进程环境变量优先（含显式空值）；`.env` 仅载入白名单字段。代理可选：在本机 `.env` 设置 `HTTP_PROXY`/`HTTPS_PROXY`/`NO_PROXY`；不需要则保持注释或设 `NODE_USE_ENV_PROXY=0`。
+
+### 登录 Upseller（Codex 友好）
+
+在 **客户自己的电脑** 上，对 Codex 说「登录 Upseller」或「我已在浏览器登录 Upseller」，调用 MCP 工具 `upseller_login`（或运行 `scripts/login-upseller.sh` / `scripts\login-upseller.cmd`）。将打开本机浏览器；登录成功后自动写入本机 `mcp/.env`。成功回执**只含** `cookieLen` / `deviceIdLen`，永不回显 Cookie/DeviceId。每人使用自己的登录态，禁止共用或发送 `.env`。
+
+首次需安装浏览器内核：`npm install` 后执行 `npx playwright install chromium`（安装脚本装依赖后若无浏览器请补跑）。可选持久化资料目录，已登录时可直接抓取。
 
 ### 接入 MCP 宿主（Codex / Claude 等；非强制 Cursor）
 

@@ -10,12 +10,14 @@
     "check": "node scripts/check-syntax.mjs",
     "listing": "node scripts/launch.mjs listing",
     "doctor": "node scripts/launch.mjs doctor",
-    "release": "node scripts/build-mcp-release.mjs"
+    "release": "node scripts/build-mcp-release.mjs",
+    "login": "node scripts/login-upseller.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",
+    "exceljs": "4.4.0",
     "parse5": "8.1.0",
-    "exceljs": "4.4.0"
+    "playwright": "^1.56.1"
   },
   "engines": {
     "node": ">=22.12.0"

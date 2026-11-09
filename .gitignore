@@ -1,20 +1,16 @@
-# Secrets and local auth — never commit
 mcp/.env
 .env
 .env.*
 !.env.example
 !**/.env.example
-
-# Dependencies and local junk
 node_modules/
 npm-debug.log*
 .DS_Store
-
-# Private local work (not part of the public customer package)
 artifacts/
 tasks/
 assets/
 logs/
 desktop/
+.upseller-login-profile/
 *.pem
 *.key
