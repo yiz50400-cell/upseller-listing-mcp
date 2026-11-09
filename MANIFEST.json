@@ -1,0 +1,203 @@
+{
+  "name": "upseller-listing-mcp",
+  "version": "0.3.0",
+  "createdAt": "2026-11-09T02:18:47.991Z",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "5d2a9ea1290537221f23b4b323b40f08557df79af87e40dcf0fa63ed46f3feb5"
+    },
+    {
+      "path": "docs/BATCH-CAPACITY.md",
+      "sha256": "04af1604d765d40fd24a1a29e784522ec9ee4ae2ab66c1a372e64b94d0cc8494"
+    },
+    {
+      "path": "docs/MCP-DELIVERY.md",
+      "sha256": "5d2a9ea1290537221f23b4b323b40f08557df79af87e40dcf0fa63ed46f3feb5"
+    },
+    {
+      "path": "mcp/.env.example",
+      "sha256": "3a4f40e00e7d787a50f9af444e51857bb7174986e1260c82572d19ebc1a47941"
+    },
+    {
+      "path": "mcp/README.md",
+      "sha256": "df4851f7250d6fd16f46e2f55b6fe2c569dba950cda0d8d61e888d71e8bea0da"
+    },
+    {
+      "path": "mcp/src/cli.js",
+      "sha256": "eeec3906525ee140824a8f6903a18eba48f64fc145f993f20a8d14e6ab76bf4f"
+    },
+    {
+      "path": "mcp/src/client.js",
+      "sha256": "03c0ff05de3b49c101a9366ddbfa8b45816c0a9c475c1fb1658e6387814ed2e6"
+    },
+    {
+      "path": "mcp/src/constants.js",
+      "sha256": "485ea46d9ab09a68ab27ce0d2e6bf83e63cb3ed566afb9876c76e691a776dc38"
+    },
+    {
+      "path": "mcp/src/form-keys.json",
+      "sha256": "17485c14a32f4a86c28cf9c6dcd8611d06d332c73f561f58562ced9e7c006a80"
+    },
+    {
+      "path": "mcp/src/form.js",
+      "sha256": "ffe019243391ad9190998016c10ffdd2a7e0187a84e9f21d735ad8b89464b8a6"
+    },
+    {
+      "path": "mcp/src/image_manifest.js",
+      "sha256": "7aee3a0f2b3212c3fe1dfb50cca6828b521d4bc05546581f82cab7b3ded839bf"
+    },
+    {
+      "path": "mcp/src/json.js",
+      "sha256": "9bf77e4e0f9365d006444f4045f025fe992ccba38690c04c668f72a174ba9b33"
+    },
+    {
+      "path": "mcp/src/pipeline/batch.js",
+      "sha256": "b6dc0c5fcfb6b94562200ac06c72d91657dfb74e52874b14268df8e4f4261c23"
+    },
+    {
+      "path": "mcp/src/pipeline/coordinator.js",
+      "sha256": "c33470eaf90bf72fe56dff529fe270e4d308aee1c2ff848e8d8e5582effa5382"
+    },
+    {
+      "path": "mcp/src/pipeline/description.js",
+      "sha256": "b5fdb31a9359d8c4298875b1c946831d44ce47ca95f98ebae5369ba7c4d62152"
+    },
+    {
+      "path": "mcp/src/pipeline/payload.js",
+      "sha256": "a8e5317eeae3abca6af317b8ef432ef4ff5baa84f07dbeb8e54bdeb50ace4470"
+    },
+    {
+      "path": "mcp/src/pipeline/runner.js",
+      "sha256": "98a747504217e8a630973dbcaaae9915da570c4744334b99f5a5d4fa625e8d83"
+    },
+    {
+      "path": "mcp/src/pipeline/storage.js",
+      "sha256": "a13df7b19ed59ff33911aa0b6a1969ef2f20d63df2ca304e40ffa21d1e0d3cf7"
+    },
+    {
+      "path": "mcp/src/server.js",
+      "sha256": "301d6df3dbd50ee5c62db6925c9f53a2e38c37459505b72a110718349f1b046c"
+    },
+    {
+      "path": "mcp/src/task_import.js",
+      "sha256": "b7ef8d520a507ceb9471ba31b59feec8b1ce80a6edc5402a2fdb3aa620ecdde7"
+    },
+    {
+      "path": "mcp/src/task_resolver.js",
+      "sha256": "de0a70529cbc64cc211548266aedcbe123850b75891102d43962f8d9a7f9d09c"
+    },
+    {
+      "path": "mcp/src/tools/get_draft.js",
+      "sha256": "ed129859cfef231efef3a0133f4b82773925655c343533a6e7a03ad0ebe1446b"
+    },
+    {
+      "path": "mcp/src/tools/run_batch.js",
+      "sha256": "7209c5362e2ac6c7b0acd02405563b86f0fe0e33a9dc956ed3020fd7f8264633"
+    },
+    {
+      "path": "mcp/src/tools/run_listing.js",
+      "sha256": "f1572153842d27cd5bbf1a21734eb7a5482236dd7f796e88494928fa76ccf04c"
+    },
+    {
+      "path": "mcp/src/tools/save_draft.js",
+      "sha256": "fdda6e7247c648a8c70b5a04e33fd60b29aed13d4bb2514de2e3fd4c05bd378d"
+    },
+    {
+      "path": "mcp/src/tools/set_images.js",
+      "sha256": "18a09081c21163f5b33ef8a9246b1967ab85104b39082b33181ffea5dc130ed4"
+    },
+    {
+      "path": "mcp/src/tools/upload_media.js",
+      "sha256": "c82628af9ea9fe3c0b3c13ebd2d1807775f16cdeec25a735cc9b9d7c81ffbc2c"
+    },
+    {
+      "path": "mcp/test/batch-tool.test.js",
+      "sha256": "7ef32d7a190ae57eb47c8556282ba80e061fec33e9980e13775cb21eadfd8bc1"
+    },
+    {
+      "path": "mcp/test/client-reliability.test.js",
+      "sha256": "19e10f5d9550712d8bd9cd8c2f738360ba24175f332795bd0a8e6059c6a0d3c9"
+    },
+    {
+      "path": "mcp/test/coordinator.test.js",
+      "sha256": "4f458a614f72ec0e9ee259e9831d12e5e7eef880497600708b206b039e38610a"
+    },
+    {
+      "path": "mcp/test/deployment.test.js",
+      "sha256": "99e2295deab842d9e293162e16a2f9548233dcde0f91c7b5425f09e1ea803f70"
+    },
+    {
+      "path": "mcp/test/mcp-smoke.test.js",
+      "sha256": "53d2a956698204ac0a7946172ba6964cbbd05c03867824217cf43db1c54b423d"
+    },
+    {
+      "path": "mcp/test/original-image-upload.test.js",
+      "sha256": "b559ac95a1d2cfb944ec649054d632d7d898f016309ca171823ed738afd9cb3c"
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "d777a220afb14957202dc9d19ae88baa01c15dd1aba635304a99ee69482d547f"
+    },
+    {
+      "path": "package.json",
+      "sha256": "244d2d4edd0f7cb1c4d93b9a77f683b4a65aa5b1f8abb6bc63d980db6d850918"
+    },
+    {
+      "path": "scripts/build-mcp-release.mjs",
+      "sha256": "206a15c3a63d83c7bb37a853a1ace5229b6629302a8aca7a48ff6a35d1b80940"
+    },
+    {
+      "path": "scripts/check-mcp.cmd",
+      "sha256": "02af0ccd7b8f72f0fad74a217561fe0ce77b86adbc53543020c2996d4f80b7ca"
+    },
+    {
+      "path": "scripts/check-mcp.sh",
+      "sha256": "0e670dfec2b487b0c496f9a0c3e78f3ff9b3f8005981fca206e2d4104e5280bd"
+    },
+    {
+      "path": "scripts/check-syntax.mjs",
+      "sha256": "7db64594006daca308480bfab08d19f4e59c4351e17cd14ade4968b2fbd9e793"
+    },
+    {
+      "path": "scripts/install-mcp.cmd",
+      "sha256": "c67dfc3f462198f10e7d819921b4133cd743ee7055cf630c01976ade93b84b83"
+    },
+    {
+      "path": "scripts/install-mcp.sh",
+      "sha256": "4c9fe048225a230ef9368d64fb3d3bc698a587497c46305c7b07c0d67e5a8396"
+    },
+    {
+      "path": "scripts/launch.mjs",
+      "sha256": "903229f1612d7a995bbc440d4edd75b141ddd7cbcadf8612b5bfce3919b0fb41"
+    },
+    {
+      "path": "scripts/lib/runtime.mjs",
+      "sha256": "2c5cbf76162ac8100762a50e36204b49e18e7a6a6ba19eed028d55f8e5f4eaf7"
+    },
+    {
+      "path": "scripts/listing.cmd",
+      "sha256": "5e40194b1e03a72e20a6d70f6981d1e2101442b2a84a78c0844644df44e9f852"
+    },
+    {
+      "path": "scripts/listing.sh",
+      "sha256": "a13526854b6cb151b88be10f812ec5aba95c2c06bbf40b6a298d98ae1f7348b9"
+    },
+    {
+      "path": "scripts/pack-mcp-zip.mjs",
+      "sha256": "438e8cfdb5df6e3818ca1a94039e3a350a98a6c156a880b38cc674098fe7097d"
+    },
+    {
+      "path": "scripts/run-mcp.cmd",
+      "sha256": "d880d3840918bcbd8855bb8df8d8e8810a7db65b5b0738b33bcc6a5486ddc7b2"
+    },
+    {
+      "path": "scripts/run-mcp.sh",
+      "sha256": "5eb5ce3205f2236298daa79fd958429f9ebbecabd2aefd1adeaef69d70af92a1"
+    },
+    {
+      "path": "scripts/test.mjs",
+      "sha256": "006af28f7b4aa8f2cc08aeef536f144414e4316cd8614cc5a277bbe5391a6a51"
+    }
+  ]
+}

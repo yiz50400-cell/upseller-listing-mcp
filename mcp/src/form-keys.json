@@ -1,0 +1,491 @@
+{
+  "rev": "2026-11-06-capture-d",
+  "doNotChatSecrets": true,
+  "note": "Form key names / value types / lengths only. No values, Cookie, Authorization, tokens, or raw postData.",
+  "capturedAt": "2026-11-06T02:21:08.130Z",
+  "priorityPaths": [
+    "/api/tiktok/product/add",
+    "/api/tiktok/product/check-edit-price"
+  ],
+  "keysIdenticalAcrossPriorityPosts": true,
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/api/tiktok/product/add",
+      "pathWant": "/api/tiktok/product/add",
+      "present": true,
+      "status": 200,
+      "contentType": "application/x-www-form-urlencoded",
+      "bodyLen": 312113,
+      "shapeType": "form-keys",
+      "keyCount": 45,
+      "truncated": false,
+      "keys": [
+        {
+          "name": "id",
+          "type": "number",
+          "len": 17
+        },
+        {
+          "name": "shopId",
+          "type": "number",
+          "len": 7
+        },
+        {
+          "name": "site",
+          "type": "string",
+          "len": 2
+        },
+        {
+          "name": "itemTitle",
+          "type": "string",
+          "len": 103
+        },
+        {
+          "name": "categoryId",
+          "type": "number",
+          "len": 6
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "len": 4257
+        },
+        {
+          "name": "sourceUrl",
+          "type": "empty",
+          "len": 0
+        },
+        {
+          "name": "categoryVersion",
+          "type": "string",
+          "len": 2
+        },
+        {
+          "name": "brandInfo",
+          "type": "json-object",
+          "len": 23
+        },
+        {
+          "name": "brandInfo.id",
+          "type": "number",
+          "len": 1
+        },
+        {
+          "name": "brandInfo.name",
+          "type": "string",
+          "len": 3
+        },
+        {
+          "name": "attributes",
+          "type": "json-array",
+          "len": 2
+        },
+        {
+          "name": "hasVariation",
+          "type": "number",
+          "len": 1
+        },
+        {
+          "name": "auction",
+          "type": "number",
+          "len": 1
+        },
+        {
+          "name": "variationListStr",
+          "type": "json-array",
+          "len": 198343
+        },
+        {
+          "name": "variationListStr[].id",
+          "type": "number",
+          "len": 17
+        },
+        {
+          "name": "variationListStr[].variationSku",
+          "type": "empty",
+          "len": 0
+        },
+        {
+          "name": "variationListStr[].barcode",
+          "type": "null",
+          "len": 0
+        },
+        {
+          "name": "variationListStr[].barcodeType",
+          "type": "string",
+          "len": 4
+        },
+        {
+          "name": "variationListStr[].price",
+          "type": "number",
+          "len": 3
+        },
+        {
+          "name": "variationListStr[].startingBidPrice",
+          "type": "null",
+          "len": 0
+        },
+        {
+          "name": "variationListStr[].stock",
+          "type": "number",
+          "len": 3
+        },
+        {
+          "name": "variationListStr[].inventoryItem",
+          "type": "json-array",
+          "len": 76
+        },
+        {
+          "name": "variationListStr[].inventoryItem[].quantity",
+          "type": "number",
+          "len": 3
+        },
+        {
+          "name": "variationListStr[].inventoryItem[].warehouseName",
+          "type": "number",
+          "len": 3
+        },
+        {
+          "name": "variationListStr[].inventoryItem[].warehouseId",
+          "type": "number",
+          "len": 19
+        },
+        {
+          "name": "variationListStr[].packageWeight",
+          "type": "number",
+          "len": 4
+        },
+        {
+          "name": "variationListStr[].packageLength",
+          "type": "number",
+          "len": 2
+        },
+        {
+          "name": "variationListStr[].packageWidth",
+          "type": "number",
+          "len": 1
+        },
+        {
+          "name": "variationListStr[].packageHeight",
+          "type": "number",
+          "len": 1
+        },
+        {
+          "name": "variationListStr[].weightUnit",
+          "type": "string",
+          "len": 2
+        },
+        {
+          "name": "variationListStr[].packageUnit",
+          "type": "string",
+          "len": 2
+        },
+        {
+          "name": "variationListStr[].imageUrl",
+          "type": "string",
+          "len": 205
+        },
+        {
+          "name": "variationListStr[].salesAttributesJson",
+          "type": "json-array",
+          "len": 202
+        },
+        {
+          "name": "variationListStr[].salesAttributesJson[].id",
+          "type": "number",
+          "len": 19
+        },
+        {
+          "name": "variationListStr[].salesAttributesJson[].name",
+          "type": "string",
+          "len": 24
+        },
+        {
+          "name": "variationListStr[].salesAttributesJson[].valueId",
+          "type": "number",
+          "len": 19
+        },
+        {
+          "name": "variationListStr[].salesAttributesJson[].valueName",
+          "type": "string",
+          "len": 18
+        },
+        {
+          "name": "variationTheme",
+          "type": "string",
+          "len": 30
+        },
+        {
+          "name": "imgUrl",
+          "type": "string",
+          "len": 1853
+        },
+        {
+          "name": "certifications",
+          "type": "json-array",
+          "len": 87
+        },
+        {
+          "name": "certifications[].id",
+          "type": "number",
+          "len": 19
+        },
+        {
+          "name": "certifications[].fileList",
+          "type": "json-array",
+          "len": 2
+        },
+        {
+          "name": "op",
+          "type": "number",
+          "len": 1
+        },
+        {
+          "name": "anyway",
+          "type": "boolean",
+          "len": 5
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/tiktok/product/check-edit-price",
+      "pathWant": "/api/tiktok/product/check-edit-price",
+      "present": true,
+      "status": 200,
+      "contentType": "application/x-www-form-urlencoded",
+      "bodyLen": 312113,
+      "shapeType": "form-keys",
+      "keyCount": 45,
+      "truncated": false,
+      "keys": [
+        {
+          "name": "id",
+          "type": "number",
+          "len": 17
+        },
+        {
+          "name": "shopId",
+          "type": "number",
+          "len": 7
+        },
+        {
+          "name": "site",
+          "type": "string",
+          "len": 2
+        },
+        {
+          "name": "itemTitle",
+          "type": "string",
+          "len": 103
+        },
+        {
+          "name": "categoryId",
+          "type": "number",
+          "len": 6
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "len": 4257
+        },
+        {
+          "name": "sourceUrl",
+          "type": "empty",
+          "len": 0
+        },
+        {
+          "name": "categoryVersion",
+          "type": "string",
+          "len": 2
+        },
+        {
+          "name": "brandInfo",
+          "type": "json-object",
+          "len": 23
+        },
+        {
+          "name": "brandInfo.id",
+          "type": "number",
+          "len": 1
+        },
+        {
+          "name": "brandInfo.name",
+          "type": "string",
+          "len": 3
+        },
+        {
+          "name": "attributes",
+          "type": "json-array",
+          "len": 2
+        },
+        {
+          "name": "hasVariation",
+          "type": "number",
+          "len": 1
+        },
+        {
+          "name": "auction",
+          "type": "number",
+          "len": 1
+        },
+        {
+          "name": "variationListStr",
+          "type": "json-array",
+          "len": 198343
+        },
+        {
+          "name": "variationListStr[].id",
+          "type": "number",
+          "len": 17
+        },
+        {
+          "name": "variationListStr[].variationSku",
+          "type": "empty",
+          "len": 0
+        },
+        {
+          "name": "variationListStr[].barcode",
+          "type": "null",
+          "len": 0
+        },
+        {
+          "name": "variationListStr[].barcodeType",
+          "type": "string",
+          "len": 4
+        },
+        {
+          "name": "variationListStr[].price",
+          "type": "number",
+          "len": 3
+        },
+        {
+          "name": "variationListStr[].startingBidPrice",
+          "type": "null",
+          "len": 0
+        },
+        {
+          "name": "variationListStr[].stock",
+          "type": "number",
+          "len": 3
+        },
+        {
+          "name": "variationListStr[].inventoryItem",
+          "type": "json-array",
+          "len": 76
+        },
+        {
+          "name": "variationListStr[].inventoryItem[].quantity",
+          "type": "number",
+          "len": 3
+        },
+        {
+          "name": "variationListStr[].inventoryItem[].warehouseName",
+          "type": "number",
+          "len": 3
+        },
+        {
+          "name": "variationListStr[].inventoryItem[].warehouseId",
+          "type": "number",
+          "len": 19
+        },
+        {
+          "name": "variationListStr[].packageWeight",
+          "type": "number",
+          "len": 4
+        },
+        {
+          "name": "variationListStr[].packageLength",
+          "type": "number",
+          "len": 2
+        },
+        {
+          "name": "variationListStr[].packageWidth",
+          "type": "number",
+          "len": 1
+        },
+        {
+          "name": "variationListStr[].packageHeight",
+          "type": "number",
+          "len": 1
+        },
+        {
+          "name": "variationListStr[].weightUnit",
+          "type": "string",
+          "len": 2
+        },
+        {
+          "name": "variationListStr[].packageUnit",
+          "type": "string",
+          "len": 2
+        },
+        {
+          "name": "variationListStr[].imageUrl",
+          "type": "string",
+          "len": 205
+        },
+        {
+          "name": "variationListStr[].salesAttributesJson",
+          "type": "json-array",
+          "len": 202
+        },
+        {
+          "name": "variationListStr[].salesAttributesJson[].id",
+          "type": "number",
+          "len": 19
+        },
+        {
+          "name": "variationListStr[].salesAttributesJson[].name",
+          "type": "string",
+          "len": 24
+        },
+        {
+          "name": "variationListStr[].salesAttributesJson[].valueId",
+          "type": "number",
+          "len": 19
+        },
+        {
+          "name": "variationListStr[].salesAttributesJson[].valueName",
+          "type": "string",
+          "len": 18
+        },
+        {
+          "name": "variationTheme",
+          "type": "string",
+          "len": 30
+        },
+        {
+          "name": "imgUrl",
+          "type": "string",
+          "len": 1853
+        },
+        {
+          "name": "certifications",
+          "type": "json-array",
+          "len": 87
+        },
+        {
+          "name": "certifications[].id",
+          "type": "number",
+          "len": 19
+        },
+        {
+          "name": "certifications[].fileList",
+          "type": "json-array",
+          "len": 2
+        },
+        {
+          "name": "op",
+          "type": "number",
+          "len": 1
+        },
+        {
+          "name": "anyway",
+          "type": "boolean",
+          "len": 5
+        }
+      ]
+    }
+  ]
+}

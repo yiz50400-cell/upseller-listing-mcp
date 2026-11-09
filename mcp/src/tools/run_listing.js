@@ -1,0 +1,9 @@
+import { normalizeTask } from '../task_import.js';
+import { resolveTask } from '../task_resolver.js';
+import { runListing } from '../pipeline/runner.js';
+export async function upsellerRunListing(client,args={}){
+ const task=await normalizeTask(args.task||{}, {identity:args.task?.taskId||'mcp-task'});
+ if(!args.task?.taskId)throw new Error('必须提供稳定的 taskId 以安全续跑');
+ return runListing(client,await resolveTask(client,task),{dataDir:args.dataDir,dryRun:args.dryRun!==false,confirmPublish:args.confirmPublish===true,timeoutMs:args.timeoutMs,uploadConcurrency:args.uploadConcurrency});
+}
+export const runListingToolSchema={name:'upseller_run_listing',description:'连续上架：并行上传并准备草稿、单次提交、最终核验。默认仅预览；publish=true 且 confirmPublish=true 才发布。相同 taskId 续跑只对账，不重复提交。审核时间单独统计。',inputSchema:{type:'object',properties:{task:{type:'object',description:'稳定 taskId、sourceInternalId/productId 或 draftId、targetShopId/targetShopName、images [{path,role,skuName}]、skuMappings [{from,to}]、productPrice、publish 等。',properties:{taskId:{type:'string'},sourceInternalId:{type:'string'},productId:{type:'string'},draftId:{type:'string'},targetShopId:{type:'string'},targetShopName:{type:'string'},title:{type:'string'},productPrice:{type:'number'},publish:{type:'boolean'},replaceDesigns:{type:'boolean'},retainMappedColorsOnly:{type:'boolean'},includeSkuImagesInGallery:{type:'boolean'},images:{type:'array',items:{type:'object',properties:{path:{type:'string'},role:{type:'string',enum:['main','gallery','sku']},skuName:{type:'string'}},required:['path','role']}},skuMappings:{type:'array',items:{type:'object',properties:{from:{type:'string'},to:{type:'string'}},required:['from','to']}}},required:['taskId']},dryRun:{type:'boolean',default:true},confirmPublish:{type:'boolean',default:false},dataDir:{type:'string'},timeoutMs:{type:'integer',minimum:1000,maximum:300000},uploadConcurrency:{type:'integer',minimum:1,maximum:4}},required:['task']}};
