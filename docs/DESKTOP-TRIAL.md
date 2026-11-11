@@ -1,14 +1,28 @@
-# 自动上架 Windows 试用版（风格 B）
+# 自动上架试用版（风格 B，Windows / Mac）
 
-客户打开软件即可填写并走预览 / 保存草稿。不需要安装 Cursor，也不需要安装 Codex。任务表不再是唯一入口。
+客户打开软件即可填写并走预览 / 保存草稿。不需要安装 Cursor，也不需要安装 Codex，也不用先装 Node。任务表不再是唯一入口。
 
 ## 怎么打开
 
-1. 下载 Windows 64 位便携版：`desktop/dist/UpSeller-Listing-Trial-0.3.0-trial-win-x64.exe`（或 GitHub Actions 产物同名文件）。
-2. 双击运行。无需安装。Windows 可能提示未签名应用，选择「仍要运行」即可。
-3. 若本机还没有会话：打开左侧「设置」→「登录 Upseller」，在弹出的浏览器里登录。成功后界面只显示 `cookieLen` / `deviceIdLen`，不会显示 Cookie 或 DeviceId。
-4. 在「店铺」页添加你自己的目标店铺，再回到「任务」填写产品ID、复制到几店、价格、标题和图片，然后先「预览」，再「保存草稿」。
-5. 「发布」会弹出二次确认，默认不会发布。
+### Windows
+
+1. 使用 64 位便携版：`UpSeller-Listing-Trial-0.3.0-trial-win-x64.exe`（或 GitHub Actions 产物同名文件）。
+2. 双击运行。无需安装。未签名时 Windows 可能提示 SmartScreen，选择「仍要运行」即可。
+
+### Mac（Apple Silicon 优先，也可出 Intel 包）
+
+1. 使用对应芯片的磁盘映像，例如 Apple Silicon：`UpSeller-Listing-Trial-0.3.0-trial-mac-arm64.dmg`（Intel 为 `...-mac-x64.dmg`）。同名 `.zip` 里是可以直接拷走的 `自动上架.app`。
+2. 双击打开 `.dmg`，把「自动上架」拖到「应用程序」或直接从映像里打开。
+3. 试用包未做 Apple 开发者签名。若提示「无法打开，因为无法验证开发者」：按住 Control 再单击图标，选择「打开」，或到「系统设置 → 隐私与安全性」里点「仍要打开」。
+4. 若提示「已损坏，不能打开」：这是未签名应用被隔离，不是文件真的坏了。在「终端」执行（把路径换成实际位置）：
+   `xattr -cr "/Applications/自动上架.app"`
+   然后再打开。
+
+### 登录与上架（Windows / Mac 相同）
+
+1. 若本机还没有会话：打开左侧「设置」→「登录 Upseller」，在弹出的浏览器里登录。成功后界面只显示 `cookieLen` / `deviceIdLen`，不会显示 Cookie 或 DeviceId。
+2. 在「店铺」页添加你自己的目标店铺，再回到「任务」填写产品ID、复制到几店、价格、标题和图片，然后先「预览」，再「保存草稿」。
+3. 「发布」会弹出二次确认，默认不会发布。带「示意」标记的店铺/产品只用于看风格，不会当作真实店铺上架。
 
 源码开发调试（本仓库根目录已 `npm install`，并在 `desktop/` 安装 Electron）：
 
@@ -16,6 +30,9 @@
 cd desktop
 npm start
 ```
+
+Windows 便携版：`cd desktop && npm run build:win`  
+Mac 包（需在 macOS 上构建）：`cd desktop && npm run build:mac`（仅 Apple Silicon）或 `npm run build:mac:all`（arm64 + Intel）。
 
 ## 做了哪些
 
@@ -29,4 +46,4 @@ npm start
 
 - 当前上架能力尚不处理视频：表单可选择并保存在本地，但不会把视频交给预览 / 草稿 / 发布流程。
 - 未做代码签名。实机上架仍需 IZ 在真实环境验收，试用版不宣称已实机通过。
-- 交叉编译出的 Windows exe 若在目标机器被安全软件拦截，可用 GitHub Actions 的 windows runner 再打一版。
+- Windows / Mac 安装包不要提交进仓；用 GitHub Actions 产物或本机 `desktop/dist/`。

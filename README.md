@@ -3,11 +3,11 @@
 版本：0.3.0，2026-11-09。交付形态是现有 stdio MCP 和命令行，不是另一个客户端或工作平台。
 
 
-## 自动上架试用版（Windows 桌面）
+## 自动上架试用版（Windows / Mac 桌面）
 
-客户可直接打开 Windows 便携版 exe 填写并上架，不需要安装 Cursor 或 Codex，也不再把任务表当唯一入口。界面为风格 B 深色工作台。登录仍用本机 `upseller_login` / `mcp/.env`，成功只回长度。打开方法和限制见 [docs/DESKTOP-TRIAL.md](docs/DESKTOP-TRIAL.md)。
+客户可直接打开 Windows 便携版 exe，或 Mac 上的 `.dmg` / `自动上架.app` 填写并上架，不需要安装 Cursor 或 Codex，也不用先装 Node，也不再把任务表当唯一入口。界面为风格 B 深色工作台。登录仍用本机 `upseller_login` / `mcp/.env`，成功只回长度。打开方法和限制见 [docs/DESKTOP-TRIAL.md](docs/DESKTOP-TRIAL.md)。
 
-从源码运行：先在仓库根目录 `npm install`，再执行 `cd desktop && npm install && npm start`。Windows 便携版构建：`cd desktop && npm run build:win`。不要把真实 `.env` 提交进仓。
+从源码运行：先在仓库根目录 `npm install`，再执行 `cd desktop && npm install && npm start`。Windows 便携版：`cd desktop && npm run build:win`。Mac 包需在 macOS 上构建：`cd desktop && npm run build:mac`（Apple Silicon）或 `npm run build:mac:all`（同时出 Intel）。不要把真实 `.env` 或安装包提交进仓。
 
 
 ## 安装与配置
