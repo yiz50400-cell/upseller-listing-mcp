@@ -82,7 +82,8 @@
             "x64"
           ]
         }
-      ]
+      ],
+      "icon": "icons/icon.ico"
     },
     "mac": {
       "category": "public.app-category.business",
@@ -105,7 +106,8 @@
             "x64"
           ]
         }
-      ]
+      ],
+      "icon": "icons/icon.icns"
     }
   }
 }
