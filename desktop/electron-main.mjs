@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -7,6 +7,7 @@ import { resolveEnvPath, toolkitRoot } from './lib/paths.mjs';
 import { readAuthStatus } from './lib/auth-status.mjs';
 import { loadState, saveState } from './lib/task-store.mjs';
 import { loginWithExistingScheme, runFormAction, loadDraft, safeError } from './lib/listing-service.mjs';
+import { captureSessionWithElectron } from './lib/electron-login.mjs';
 import { sanitizeForUi } from './lib/sanitize.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -82,12 +83,20 @@ app.whenReady().then(() => {
     return snapshot(userDataDir, envPath);
   });
 
+  const loginSession = session.fromPartition('persist:upseller-login');
+
   ipcMain.handle('desktop:login', async (_evt, opts = {}) => {
     try {
       const out = await loginWithExistingScheme({
         toolkitRoot: toolkit,
         envPath,
         timeoutMs: opts.timeoutMs,
+        captureSession: (options) => captureSessionWithElectron({
+          toolkitRoot: toolkit,
+          session: loginSession,
+          timeoutMs: options.timeoutMs,
+          startUrl: options.startUrl,
+        }),
       });
       return { ...out, auth: readAuthStatus(envPath) };
     } catch (err) {

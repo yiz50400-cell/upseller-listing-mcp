@@ -26,19 +26,37 @@ function demo(id, title, sku, shopName, site, price, currency, status, age) {
     galleryImages: [],
     skuImages: [],
     video: '',
-    notes: '示意数据，不是真实店铺或真实商品',
+    notes: '',
   };
 }
 
 let state = { tasks: [], shops: [], materials: { images: [], videos: [] }, auth: {}, meta: {} };
 let selectedId = null;
 let formVideo = '';
+const checkedIds = new Set();
 
 function $(id) { return document.getElementById(id); }
 
+function visibleTasks() {
+  const q = $('taskSearch').value.trim().toLowerCase();
+  return (state.tasks.length ? state.tasks : demoTasks).filter((t) => {
+    const blob = `${t.title || ''} ${t.skuPrefix || ''} ${t.productId || ''}`.toLowerCase();
+    return !q || blob.includes(q);
+  });
+}
+
+function syncCheckAll() {
+  const ids = visibleTasks().map((t) => t.id);
+  const box = $('checkAll');
+  const all = ids.length > 0 && ids.every((id) => checkedIds.has(id));
+  const some = ids.some((id) => checkedIds.has(id));
+  box.checked = all;
+  box.indeterminate = some && !all;
+}
+
 function toast(message, isError) {
   const el = $('toast');
-  el.textContent = message;
+  el.textContent = String(message || '').split('\n')[0];
   el.classList.toggle('err', Boolean(isError));
   el.classList.remove('hidden');
   clearTimeout(toast._t);
@@ -75,14 +93,14 @@ function applyForm(task) {
   $('f-price').value = task.price || '';
   $('f-currency').value = task.currency || 'USD';
   $('f-skuPrefix').value = task.skuPrefix || '';
-  $('f-notes').value = task.notes || '';
+  $('f-notes').value = task.demo ? '' : (task.notes || '');
   $('f-copyCount').value = task.copyToShopCount || 1;
   formVideo = task.video || '';
   $('f-videoName').value = formVideo ? formVideo.split(/[\\/]/).pop() : '';
   $('footTitle').textContent = task.title || '未命名任务';
   $('footSub').textContent = task.demo
-    ? '示意数据，仅用于对照风格，不会当作真实店铺上架'
-    : (task.skuPrefix ? `SKU: ${task.skuPrefix}` : '先预览，再保存草稿；发布需二次确认');
+    ? '示意内容，不会拿去上架'
+    : (task.skuPrefix ? `编号 ${task.skuPrefix}` : '先预览，再保存草稿');
   const shopSel = $('f-shop');
   if (task.shopId || task.shopName) {
     const match = [...shopSel.options].find((o) => o.dataset.id === task.shopId || o.dataset.name === task.shopName);
@@ -93,7 +111,7 @@ function applyForm(task) {
 
 function collectShopsForRun() {
   const form = currentForm();
-  const fromState = state.shops || [];
+  const fromState = (state.shops || []).filter((s) => !s.demo);
   if (fromState.length) return fromState;
   if (form.shopId || form.shopName) return [{ id: form.shopId, name: form.shopName }];
   return [];
@@ -112,24 +130,22 @@ function fileUrl(file) {
 }
 
 function renderRows() {
-  const q = $('taskSearch').value.trim().toLowerCase();
-  const rows = (state.tasks.length ? state.tasks : demoTasks).filter((t) => {
-    const blob = `${t.title || ''} ${t.skuPrefix || ''} ${t.productId || ''}`.toLowerCase();
-    return !q || blob.includes(q);
-  });
+  const rows = visibleTasks();
   $('taskRows').innerHTML = rows.map((t) => {
     const thumb = (t.mainImages && t.mainImages[0])
       ? `<img class="thumb" src="${fileUrl(t.mainImages[0])}" alt="" />`
       : `<div class="thumb ph">图</div>`;
     const selected = t.id === selectedId ? 'selected' : '';
+    const checked = checkedIds.has(t.id) ? 'checked' : '';
     return `<div class="task-row ${selected}" data-id="${t.id}">
-      <div><input type="checkbox" /></div>
+      <div class="col-check"><input type="checkbox" data-check="${escapeAttr(t.id)}" ${checked} aria-label="选择 ${escapeAttr(t.title || '任务')}" /></div>
       <div class="product-cell">${thumb}<div><div class="prod-name">${escapeHtml(t.title || '未命名')}${t.demo ? '<span class="badge demo">示意</span>' : ''}</div><div class="prod-sku">${escapeHtml(t.skuPrefix ? 'SKU: ' + t.skuPrefix : (t.productId || ''))}</div></div></div>
       <div class="shop-cell">${escapeHtml(t.shopName || '未指定')}${t.site ? `<small>(${escapeHtml(t.site)})</small>` : ''}</div>
       <div class="price-cell">${escapeHtml(String(t.price || '—'))}<div class="prod-sku">${escapeHtml(t.currency || '')}</div></div>
       <div class="status-cell">${statusBadge(t.status)}${escapeHtml(t.age || '')}</div>
     </div>`;
   }).join('');
+  syncCheckAll();
 }
 
 function renderThumbs() {
@@ -150,9 +166,6 @@ function paintThumbs(id, files, kind) {
 
 function renderShops() {
   const list = state.shops || [];
-  $('shopList').innerHTML = list.length
-    ? list.map((s, i) => `<div class="list-item"><div>${escapeHtml(s.name || '未命名')}<div class="prod-sku">${escapeHtml(s.id || '无店铺ID')}</div></div><button class="ghost" data-del-shop="${i}">删除</button></div>`).join('')
-    : '<p class="lede">还没有店铺。添加后可用于「目标店铺」和「复制到几店」。请使用你自己的店铺，不要把示意名称当成真实店铺。</p>';
   const select = $('f-shop');
   const previous = select.value;
   const options = list.length ? list : [{ name: '目标店铺 A', id: '', demo: true }, { name: '目标店铺 B', id: '', demo: true }, { name: '目标店铺 C', id: '', demo: true }];
@@ -160,28 +173,13 @@ function renderShops() {
   if (previous) select.value = previous;
 }
 
-function renderMaterials() {
-  const images = state.materials?.images || [];
-  $('matThumbs').innerHTML = images.map((file) => `<div class="tile"><img src="${fileUrl(file)}" alt="" /></div>`).join('')
-    || '<p class="lede">还没有素材。</p>';
-}
-
 function renderAuth() {
   const auth = state.auth || {};
   const loggedIn = Boolean(auth.loggedIn);
   $('loginPill').classList.toggle('on', loggedIn);
   $('loginPill').innerHTML = loggedIn ? '<i></i>已登录' : '<i></i>未登录';
-  $('userState').textContent = loggedIn ? `已登录 · cookieLen=${auth.cookieLen || 0} deviceIdLen=${auth.deviceIdLen || 0}` : '未登录';
-  $('authKv').innerHTML = [
-    ['登录状态', loggedIn ? '已登录' : '未登录'],
-    ['cookieLen', auth.cookieLen ?? 0],
-    ['deviceIdLen', auth.deviceIdLen ?? 0],
-    ['env 权限', auth.mode || '—'],
-    ['env 路径', auth.envPath || '—'],
-    ['固定批次', state.meta?.productConcurrency || 8],
-    ['需要 Cursor', '否'],
-    ['需要 Codex', '否'],
-  ].map(([k, v]) => `<dt>${escapeHtml(String(k))}</dt><dd>${escapeHtml(String(v))}</dd>`).join('');
+  $('userState').textContent = loggedIn ? '已登录' : '未登录';
+  $('authStatus').textContent = loggedIn ? '当前已登录' : '当前未登录';
 }
 
 function escapeHtml(s) {
@@ -194,7 +192,6 @@ async function refresh() {
   if (!state.tasks) state.tasks = [];
   renderShops();
   renderRows();
-  renderMaterials();
   renderAuth();
   if (selectedId) {
     const task = state.tasks.find((t) => t.id === selectedId);
@@ -252,12 +249,11 @@ async function run(mode, confirmPublish = false) {
     shops: collectShopsForRun(),
   });
   if (!result?.ok) {
-    toast((result?.error || '操作未完成') + (result?.warnings?.length ? `\n${result.warnings.join('\n')}` : ''), true);
+    toast(result?.error || '操作未完成', true);
     return result;
   }
-  const prefix = mode === 'preview' ? '预览完成（未写草稿、未发布）' : mode === 'save-draft' ? '已请求保存草稿（未发布）' : '已提交发布请求（实机结果需由 IZ 验收，试用版不宣称已实机通过）';
-  const extra = [result.warnings?.join('\n'), result.videoIgnored ? '视频未进入上架流程。' : ''].filter(Boolean).join('\n');
-  toast([prefix, extra].filter(Boolean).join('\n'));
+  const prefix = mode === 'preview' ? '预览完成，没有写入草稿，也没有发布' : mode === 'save-draft' ? '已请求保存草稿，不会发布' : '已提交发布请求。试用版不宣称已在真机刊登通过';
+  toast(result.videoIgnored ? `${prefix}。所选视频不会进入上架流程。` : prefix);
   if (mode === 'save-draft') task.status = 'draft';
   if (mode === 'publish') task.status = 'wait';
   await persistTasks(state.tasks);
@@ -278,6 +274,15 @@ document.querySelectorAll('[data-win]').forEach((btn) => {
 
 $('taskSearch').addEventListener('input', renderRows);
 $('taskRows').addEventListener('click', (e) => {
+  const box = e.target.closest('input[data-check]');
+  if (box) {
+    e.stopPropagation();
+    const id = box.dataset.check;
+    if (box.checked) checkedIds.add(id);
+    else checkedIds.delete(id);
+    syncCheckAll();
+    return;
+  }
   const row = e.target.closest('.task-row');
   if (!row) return;
   selectedId = row.dataset.id;
@@ -285,10 +290,14 @@ $('taskRows').addEventListener('click', (e) => {
   renderRows();
   if (task) applyForm(task);
 });
-$('taskRows').addEventListener('click', (e) => {
-  if (e.target.matches('button[data-kind]')) {
-    e.stopPropagation();
+$('checkAll').addEventListener('click', (e) => {
+  e.stopPropagation();
+  const on = $('checkAll').checked;
+  for (const t of visibleTasks()) {
+    if (on) checkedIds.add(t.id);
+    else checkedIds.delete(t.id);
   }
+  renderRows();
 });
 $('newTaskBtn').addEventListener('click', async () => {
   const task = { id: `ui-${Date.now().toString(36)}`, title: '新任务', status: 'draft', copyToShopCount: 1, mainImages: [], galleryImages: [], skuImages: [] };
@@ -335,52 +344,35 @@ $('confirmPublish').addEventListener('click', async () => {
   await run('publish', true);
 });
 
+$('toggleShopAdd').addEventListener('click', () => {
+  $('shopAddRow').classList.toggle('hidden');
+});
 $('addShopBtn').addEventListener('click', async () => {
   const name = $('shopName').value.trim();
   const id = $('shopId').value.trim();
-  if (!name && !id) return toast('请填写店铺名称或 ID', true);
+  if (!name && !id) return toast('请填写店铺名称或编号', true);
   state.shops = [...(state.shops || []), { name, id }];
   $('shopName').value = '';
   $('shopId').value = '';
+  $('shopAddRow').classList.add('hidden');
   await api.saveState({ shops: state.shops });
   renderShops();
-});
-$('shopList').addEventListener('click', async (e) => {
-  const btn = e.target.closest('[data-del-shop]');
-  if (!btn) return;
-  state.shops.splice(Number(btn.dataset.delShop), 1);
-  await api.saveState({ shops: state.shops });
-  renderShops();
-});
-
-$('addMatImages').addEventListener('click', async () => {
-  const files = await api.pickFiles('images');
-  if (!files?.length) return;
-  state.materials = state.materials || { images: [], videos: [] };
-  state.materials.images = [...(state.materials.images || []), ...files];
-  await api.saveState({ materials: state.materials });
-  renderMaterials();
-});
-$('addMatVideo').addEventListener('click', async () => {
-  const files = await api.pickFiles('video');
-  if (!files?.length) return;
-  state.materials = state.materials || { images: [], videos: [] };
-  state.materials.videos = [...(state.materials.videos || []), ...files];
-  toast('视频已加入本机素材库。当前上架能力尚不处理视频。');
+  $('f-shop').value = String(state.shops.length - 1);
+  toast('已添加店铺');
 });
 
 $('loginBtn').addEventListener('click', async () => {
-  toast('正在打开登录浏览器，完成后只回报长度…');
+  toast('正在打开登录窗口，请在弹出的页面里完成登录');
   const out = await api.login({ timeoutMs: 300000 });
   state.auth = out.auth || state.auth;
   renderAuth();
-  if (out.ok) toast(`登录成功。cookieLen=${out.cookieLen} deviceIdLen=${out.deviceIdLen} mode=${out.mode || ''}`);
+  if (out.ok) toast('登录成功');
   else toast(out.error || '登录未完成', true);
 });
 $('refreshAuthBtn').addEventListener('click', refresh);
 $('loadDraftBtn').addEventListener('click', async () => {
   const id = $('f-productId').value.trim();
-  if (!id) return toast('请先填写草稿 ID', true);
+  if (!id) return toast('请先填写草稿编号', true);
   const out = await api.loadDraft(id);
   if (!out.ok) return toast(out.error || '载入草稿失败', true);
   const task = ensureTask();
@@ -392,7 +384,7 @@ $('loadDraftBtn').addEventListener('click', async () => {
   task.shopName = out.draft?.shopName || task.shopName;
   await persistTasks(state.tasks);
   applyForm(task);
-  toast('已载入草稿摘要（不含密钥）');
+  toast('已载入草稿');
 });
 
 refresh().then(() => {
@@ -404,4 +396,4 @@ refresh().then(() => {
     applyForm(state.tasks[0]);
   }
   renderRows();
-}).catch((err) => toast(String(err?.message || err), true));
+}).catch((err) => toast(String(err?.message || err).split('\n')[0], true));

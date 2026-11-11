@@ -25,13 +25,14 @@ function clientOrThrow(createClient) {
   }
 }
 
-export async function loginWithExistingScheme({ toolkitRoot, envPath, timeoutMs }) {
+export async function loginWithExistingScheme({ toolkitRoot, envPath, timeoutMs, captureSession }) {
   const { upsellerLogin } = await loadTools(toolkitRoot);
+  const deps = captureSession ? { captureSession } : {};
   const out = await upsellerLogin({
     envPath,
     headless: false,
     timeoutMs: timeoutMs ?? 300000,
-  });
+  }, {}, deps);
   applySessionEnv(envPath);
   return sanitizeForUi({
     ok: Boolean(out.ok),
