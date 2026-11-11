@@ -13,6 +13,9 @@ import { sanitizeForUi } from './lib/sanitize.mjs';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const packaged = app.isPackaged;
 
+let mainWindow = null;
+let loginInFlight = null;
+
 function roots() {
   const userDataDir = app.getPath('userData');
   return {
@@ -41,6 +44,9 @@ function createWindow() {
   });
   win.loadFile(path.join(here, 'renderer', 'index.html'));
   win.once('ready-to-show', () => win.show());
+  win.on('closed', () => {
+    if (mainWindow === win) mainWindow = null;
+  });
   win.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url);
     return { action: 'deny' };
@@ -62,6 +68,14 @@ function snapshot(userDataDir, envPath) {
     },
   };
 }
+
+
+process.on('uncaughtException', (err) => {
+  console.error(err);
+});
+process.on('unhandledRejection', (err) => {
+  console.error(err);
+});
 
 app.whenReady().then(() => {
   const { userDataDir, envPath, toolkit } = roots();
@@ -86,22 +100,28 @@ app.whenReady().then(() => {
   const loginSession = session.fromPartition('persist:upseller-login');
 
   ipcMain.handle('desktop:login', async (_evt, opts = {}) => {
-    try {
-      const out = await loginWithExistingScheme({
-        toolkitRoot: toolkit,
-        envPath,
-        timeoutMs: opts.timeoutMs,
-        captureSession: (options) => captureSessionWithElectron({
+    if (loginInFlight) return loginInFlight;
+    loginInFlight = (async () => {
+      try {
+        const out = await loginWithExistingScheme({
           toolkitRoot: toolkit,
-          session: loginSession,
-          timeoutMs: options.timeoutMs,
-          startUrl: options.startUrl,
-        }),
-      });
-      return { ...out, auth: readAuthStatus(envPath) };
-    } catch (err) {
-      return { ...safeError(err), auth: readAuthStatus(envPath) };
-    }
+          envPath,
+          timeoutMs: opts.timeoutMs,
+          captureSession: (options) => captureSessionWithElectron({
+            toolkitRoot: toolkit,
+            session: loginSession,
+            timeoutMs: options.timeoutMs,
+            startUrl: options.startUrl,
+          }),
+        });
+        return { ...out, auth: readAuthStatus(envPath) };
+      } catch (err) {
+        return { ...safeError(err), auth: readAuthStatus(envPath) };
+      } finally {
+        loginInFlight = null;
+      }
+    })();
+    return loginInFlight;
   });
 
   ipcMain.handle('desktop:runAction', async (_evt, payload = {}) => {
@@ -150,9 +170,13 @@ app.whenReady().then(() => {
     return true;
   });
 
-  createWindow();
+  mainWindow = createWindow();
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      mainWindow = createWindow();
+    } else if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.show();
+    }
   });
 });
 

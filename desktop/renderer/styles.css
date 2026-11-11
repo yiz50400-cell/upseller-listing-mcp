@@ -93,7 +93,7 @@ button { cursor: pointer; }
 .task-list-card { flex: 1; min-height: 180px; display: flex; flex-direction: column; overflow: hidden; }
 .table-head, .task-row {
   display: grid;
-  grid-template-columns: 36px minmax(280px, 1.6fr) 160px 120px 160px 240px;
+  grid-template-columns: 36px minmax(220px, 1.4fr) 140px 110px 130px 72px minmax(280px, auto);
   align-items: center;
   gap: 8px;
   padding: 0 14px;
@@ -239,3 +239,22 @@ input[type="checkbox"] { accent-color: var(--accent); }
 .login-status { font-size: 16px; margin: 0 0 18px; }
 .toast { font-size: 15px; line-height: 1.55; max-width: 360px; }
 .fine { font-size: 13px; }
+
+.col-actions { display: flex; align-items: center; justify-content: flex-start; }
+.row-del {
+  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+  border-radius: 8px;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 13px;
+}
+.row-del:hover { color: #f3f4f7; border-color: #5a6170; }
+.empty-tasks {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 15px;
+}
+.table-tools .btn { height: 30px; padding: 0 12px; font-size: 13px; }

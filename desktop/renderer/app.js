@@ -1,3 +1,5 @@
+import { ensureTaskList, deleteTasks, createProduct, nextSelectedId, visibleTasks as filterTasks } from './task-list.mjs';
+
 const api = window.upsellerDesktop;
 
 const demoTasks = [
@@ -38,11 +40,7 @@ const checkedIds = new Set();
 function $(id) { return document.getElementById(id); }
 
 function visibleTasks() {
-  const q = $('taskSearch').value.trim().toLowerCase();
-  return (state.tasks.length ? state.tasks : demoTasks).filter((t) => {
-    const blob = `${t.title || ''} ${t.skuPrefix || ''} ${t.productId || ''}`.toLowerCase();
-    return !q || blob.includes(q);
-  });
+  return filterTasks(state.tasks, $('taskSearch').value);
 }
 
 function syncCheckAll() {
@@ -143,8 +141,11 @@ function renderRows() {
       <div class="shop-cell">${escapeHtml(t.shopName || '未指定')}${t.site ? `<small>(${escapeHtml(t.site)})</small>` : ''}</div>
       <div class="price-cell">${escapeHtml(String(t.price || '—'))}<div class="prod-sku">${escapeHtml(t.currency || '')}</div></div>
       <div class="status-cell">${statusBadge(t.status)}${escapeHtml(t.age || '')}</div>
+      <div class="col-actions"><button type="button" class="row-del" data-delete="${escapeAttr(t.id)}">删除</button></div>
     </div>`;
   }).join('');
+  const empty = $('emptyTasks');
+  if (empty) empty.classList.toggle('hidden', rows.length > 0);
   syncCheckAll();
 }
 
@@ -190,6 +191,10 @@ function escapeAttr(s) { return escapeHtml(s); }
 async function refresh() {
   state = await api.getState();
   if (!state.tasks) state.tasks = [];
+  const seeded = ensureTaskList(state, demoTasks);
+  state.tasks = seeded.tasks;
+  state.settings = seeded.settings;
+  if (seeded.seeded) await api.saveState({ tasks: state.tasks, settings: state.settings });
   renderShops();
   renderRows();
   renderAuth();
@@ -201,25 +206,35 @@ async function refresh() {
 }
 
 function persistTasks(tasks) {
-  return api.saveState({ tasks });
+  return api.saveState({ tasks, settings: state.settings });
 }
 
 function ensureTask() {
   let task = state.tasks.find((t) => t.id === selectedId);
-  if (!task || task.demo) {
-    task = {
-      id: selectedId && !String(selectedId).startsWith('t-demo-') ? selectedId : `ui-${Date.now().toString(36)}`,
-      status: 'draft',
-      mainImages: [],
-      galleryImages: [],
-      skuImages: [],
-    };
+  if (!task) {
+    task = createProduct();
     selectedId = task.id;
-    state.tasks = [task, ...state.tasks.filter((t) => !t.demo && t.id !== task.id)];
+    state.tasks = [task, ...state.tasks];
   }
   const form = currentForm();
   Object.assign(task, form, { id: task.id, status: task.status || 'draft', demo: false });
   return task;
+}
+
+async function removeTasks(ids) {
+  const removed = ids.filter(Boolean);
+  if (!removed.length) {
+    toast('请先勾选要删除的产品', true);
+    return;
+  }
+  state.tasks = deleteTasks(state.tasks, removed);
+  selectedId = nextSelectedId(state.tasks, removed, selectedId);
+  for (const id of removed) checkedIds.delete(id);
+  await persistTasks(state.tasks);
+  const task = state.tasks.find((t) => t.id === selectedId);
+  if (task) applyForm(task);
+  else applyForm({ title: '', status: 'draft' });
+  renderRows();
 }
 
 async function addImages(kind) {
@@ -273,7 +288,7 @@ document.querySelectorAll('[data-win]').forEach((btn) => {
 });
 
 $('taskSearch').addEventListener('input', renderRows);
-$('taskRows').addEventListener('click', (e) => {
+$('taskRows').addEventListener('click', async (e) => {
   const box = e.target.closest('input[data-check]');
   if (box) {
     e.stopPropagation();
@@ -286,7 +301,13 @@ $('taskRows').addEventListener('click', (e) => {
   const row = e.target.closest('.task-row');
   if (!row) return;
   selectedId = row.dataset.id;
-  const task = (state.tasks.length ? state.tasks : demoTasks).find((t) => t.id === selectedId);
+  const del = e.target.closest('button[data-delete]');
+  if (del) {
+    e.stopPropagation();
+    await removeTasks([del.dataset.delete]);
+    return;
+  }
+  const task = state.tasks.find((t) => t.id === selectedId);
   renderRows();
   if (task) applyForm(task);
 });
@@ -300,12 +321,15 @@ $('checkAll').addEventListener('click', (e) => {
   renderRows();
 });
 $('newTaskBtn').addEventListener('click', async () => {
-  const task = { id: `ui-${Date.now().toString(36)}`, title: '新任务', status: 'draft', copyToShopCount: 1, mainImages: [], galleryImages: [], skuImages: [] };
+  const task = createProduct();
   selectedId = task.id;
-  state.tasks = [task, ...state.tasks.filter((t) => !t.demo)];
+  state.tasks = [task, ...state.tasks];
   await persistTasks(state.tasks);
   applyForm(task);
   renderRows();
+});
+$('deleteSelectedBtn').addEventListener('click', async () => {
+  await removeTasks([...checkedIds]);
 });
 
 $('addMain').addEventListener('click', () => addImages('main'));
@@ -388,10 +412,7 @@ $('loadDraftBtn').addEventListener('click', async () => {
 });
 
 refresh().then(() => {
-  if (!state.tasks.length) {
-    selectedId = demoTasks[0].id;
-    applyForm(demoTasks[0]);
-  } else {
+  if (state.tasks.length) {
     selectedId = state.tasks[0].id;
     applyForm(state.tasks[0]);
   }

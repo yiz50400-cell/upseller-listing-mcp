@@ -52,15 +52,18 @@
             <div class="col-shop">目标店</div>
             <div class="col-price">价格</div>
             <div class="col-status">状态</div>
+            <div class="col-actions">操作</div>
             <div class="table-tools">
               <label class="search">
                 <span>⌕</span>
                 <input id="taskSearch" type="search" placeholder="搜索产品或编号" />
               </label>
-              <button type="button" class="icon-btn" id="newTaskBtn" title="新建任务">＋</button>
+              <button type="button" class="btn" id="deleteSelectedBtn">删除所选</button>
+              <button type="button" class="btn primary" id="newTaskBtn">添加产品</button>
             </div>
           </div>
           <div class="table-body" id="taskRows"></div>
+          <div class="empty-tasks hidden" id="emptyTasks">还没有产品。点「添加产品」即可新增一行，再填写产品信息。</div>
         </div>
 
         <div class="editor-card">
@@ -173,6 +176,6 @@
   </div>
 
   <div class="toast hidden" id="toast"></div>
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

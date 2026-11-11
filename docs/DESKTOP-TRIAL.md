@@ -6,12 +6,12 @@
 
 ### Windows
 
-1. 使用 64 位便携版：`UpSeller-Listing-Trial-0.3.1-trial-win-x64.exe`（或 GitHub Actions 产物同名文件）。
+1. 使用 64 位便携版：`UpSeller-Listing-Trial-0.3.2-trial-win-x64.exe`（或 GitHub Actions 产物同名文件）。
 2. 双击运行。无需安装。未签名时 Windows 可能提示 SmartScreen，选择「仍要运行」即可。
 
 ### Mac（Apple Silicon 优先，也可出 Intel 包）
 
-1. 使用对应芯片的磁盘映像，例如 Apple Silicon：`UpSeller-Listing-Trial-0.3.1-trial-mac-arm64.dmg`（Intel 为 `...-mac-x64.dmg`）。同名 `.zip` 里是可以直接拷走的 `自动上架.app`。
+1. 使用对应芯片的磁盘映像，例如 Apple Silicon：`UpSeller-Listing-Trial-0.3.2-trial-mac-arm64.dmg`（Intel 为 `...-mac-x64.dmg`）。同名 `.zip` 里是可以直接拷走的 `自动上架.app`。
 2. 双击打开 `.dmg`，把「自动上架」拖到「应用程序」或直接从映像里打开。
 3. 试用包未做 Apple 开发者签名。若提示「无法打开，因为无法验证开发者」：按住 Control 再单击图标，选择「打开」，或到「系统设置 → 隐私与安全性」里点「仍要打开」。
 4. 若提示「已损坏，不能打开」：这是未签名应用被隔离，不是文件真的坏了。在「终端」执行（把路径换成实际位置）：
@@ -48,3 +48,6 @@ Mac 包（需在 macOS 上构建）：`cd desktop && npm run build:mac`（仅 Ap
 - 当前上架能力尚不处理视频：表单可选择并保存在本地，但不会把视频交给预览 / 草稿 / 发布流程。
 - 未做代码签名。实机上架仍需 IZ 在真实环境验收，试用版不宣称已实机通过。
 - Windows / Mac 安装包不要提交进仓；用 GitHub Actions 产物或本机 `desktop/dist/`。
+
+
+任务列表有清楚的「添加产品」按钮，可新增一行再填写信息。列表里的产品（包括示意示例）都可以单条删除或删除所选，删掉后不会再自动出现。
