@@ -1,0 +1,11 @@
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('upsellerDesktop', {
+  getState: () => ipcRenderer.invoke('desktop:getState'),
+  saveState: (patch) => ipcRenderer.invoke('desktop:saveState', patch),
+  login: (opts) => ipcRenderer.invoke('desktop:login', opts),
+  runAction: (payload) => ipcRenderer.invoke('desktop:runAction', payload),
+  loadDraft: (draftId) => ipcRenderer.invoke('desktop:loadDraft', draftId),
+  pickFiles: (kind) => ipcRenderer.invoke('desktop:pickFiles', kind),
+  windowControl: (action) => ipcRenderer.invoke('desktop:windowControl', action),
+});

@@ -1,0 +1,85 @@
+/**
+ * Map the desktop form onto existing MCP listing tasks.
+ * Reuses upseller_run_listing / upseller_run_batch field names.
+ * Video may be stored on the local form, but must NOT be sent to the
+ * current pipeline — it throws if task.video is set.
+ */
+
+function clean(value) {
+  return String(value ?? '').trim();
+}
+
+export function selectedShops(shops, copyToShopCount) {
+  const list = Array.isArray(shops) ? shops.filter((s) => clean(s.id) || clean(s.name)) : [];
+  const n = Math.max(1, Number(copyToShopCount) || 1);
+  return { wanted: n, used: list.slice(0, n), available: list.length };
+}
+
+export function buildImageList(form) {
+  const images = [];
+  const mains = form.mainImages || (form.mainImage ? [form.mainImage] : []);
+  if (mains.length > 1) throw new Error('主图只能选一张');
+  for (const file of mains) {
+    if (clean(file)) images.push({ path: clean(file), role: 'main' });
+  }
+  for (const file of form.galleryImages || []) {
+    if (clean(file)) images.push({ path: clean(file), role: 'gallery' });
+  }
+  for (const item of form.skuImages || []) {
+    const file = typeof item === 'string' ? item : item?.path;
+    const skuName = typeof item === 'string' ? undefined : item?.skuName;
+    if (clean(file)) images.push({ path: clean(file), role: 'sku', ...(clean(skuName) ? { skuName: clean(skuName) } : {}) });
+  }
+  return images;
+}
+
+export function buildListingTasks(form, shops, { publish = false } = {}) {
+  const productId = clean(form.productId);
+  const draftId = clean(form.draftId);
+  if (!productId && !draftId) throw new Error('请填写产品ID或草稿ID');
+
+  const shopPick = selectedShops(shops, form.copyToShopCount);
+  if (shopPick.used.length < 1) throw new Error('请先在「店铺」页添加目标店铺，或在表单中指定目标店铺');
+  if (shopPick.used.length < shopPick.wanted) {
+    // still proceed with what we have, but surface a warning
+  }
+
+  const title = clean(form.title) || undefined;
+  let productPrice;
+  if (form.price !== '' && form.price != null) {
+    productPrice = Number(form.price);
+    if (!Number.isFinite(productPrice) || productPrice <= 0) throw new Error('价格必须是大于零的数值');
+  }
+
+  const images = buildImageList(form);
+  const baseId = clean(form.taskId) || `ui-${Date.now().toString(36)}`;
+  const tasks = shopPick.used.map((shop, index) => {
+    const task = {
+      taskId: shopPick.used.length > 1 ? `${baseId}-${index + 1}` : baseId,
+      ...(productId ? { productId } : {}),
+      ...(draftId ? { draftId } : {}),
+      ...(clean(shop.id) ? { targetShopId: clean(shop.id) } : {}),
+      ...(clean(shop.name) ? { targetShopName: clean(shop.name) } : {}),
+      ...(title ? { title } : {}),
+      ...(productPrice != null ? { productPrice } : {}),
+      ...(images.length ? { images } : {}),
+      publish: publish === true,
+    };
+    if (clean(form.skuPrefix)) task.skuPrefix = clean(form.skuPrefix);
+    if (clean(form.notes)) task.notes = clean(form.notes);
+    // Intentionally omit video: current MCP runner rejects it.
+    return task;
+  });
+
+  return {
+    tasks,
+    warnings: [
+      ...(shopPick.used.length < shopPick.wanted
+        ? [`复制到 ${shopPick.wanted} 店，但当前只配置了 ${shopPick.used.length} 个目标店铺，已按现有店铺生成任务。`]
+        : []),
+      ...(clean(form.video) ? ['当前上架能力尚不处理视频；视频仅保存在本地任务中，不会发给预览/草稿/发布流程。'] : []),
+    ],
+    videoIgnored: Boolean(clean(form.video)),
+    shopCount: shopPick.used.length,
+  };
+}

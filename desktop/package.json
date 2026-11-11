@@ -1,0 +1,78 @@
+{
+  "name": "upseller-listing-desktop",
+  "version": "0.3.0-trial",
+  "private": true,
+  "description": "UpSeller auto-listing desktop trial (Style B). Reuses upseller-listing-mcp. Customers do not need Cursor or Codex.",
+  "type": "module",
+  "main": "electron-main.mjs",
+  "scripts": {
+    "start": "electron electron-main.mjs",
+    "test": "node --test test/*.test.mjs",
+    "build:win": "electron-builder --win portable --x64",
+    "build:win:dir": "electron-builder --win portable --x64 --dir"
+  },
+  "author": "UpSeller MCP Maintainers",
+  "devDependencies": {
+    "electron": "37.3.1",
+    "electron-builder": "26.0.12"
+  },
+  "build": {
+    "appId": "cn.upseller.listing.trial",
+    "productName": "自动上架",
+    "copyright": "Trial build — not a verified live listing certification",
+    "asar": true,
+    "asarUnpack": [
+      "**/node_modules/playwright/**",
+      "**/node_modules/playwright-core/**"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "icons"
+    },
+    "files": [
+      "electron-main.mjs",
+      "preload.cjs",
+      "lib/**/*",
+      "renderer/**/*",
+      "icons/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../mcp",
+        "to": "toolkit/mcp",
+        "filter": ["**/*", "!.env", "!.env.*", "!.env.local"]
+      },
+      {
+        "from": "../scripts",
+        "to": "toolkit/scripts"
+      },
+      {
+        "from": "../package.json",
+        "to": "toolkit/package.json"
+      },
+      {
+        "from": "../package-lock.json",
+        "to": "toolkit/package-lock.json"
+      },
+      {
+        "from": "../node_modules",
+        "to": "toolkit/node_modules"
+      },
+      {
+        "from": "../README.md",
+        "to": "toolkit/README.md"
+      }
+    ],
+    "win": {
+      "signAndEditExecutable": false,
+      "artifactName": "UpSeller-Listing-Trial-${version}-win-x64.${ext}",
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    }
+  }
+}

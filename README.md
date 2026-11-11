@@ -2,6 +2,14 @@
 
 版本：0.3.0，2026-11-09。交付形态是现有 stdio MCP 和命令行，不是另一个客户端或工作平台。
 
+
+## 自动上架试用版（Windows 桌面）
+
+客户可直接打开 Windows 便携版 exe 填写并上架，不需要安装 Cursor 或 Codex，也不再把任务表当唯一入口。界面为风格 B 深色工作台。登录仍用本机 `upseller_login` / `mcp/.env`，成功只回长度。打开方法和限制见 [docs/DESKTOP-TRIAL.md](docs/DESKTOP-TRIAL.md)。
+
+从源码运行：先在仓库根目录 `npm install`，再执行 `cd desktop && npm install && npm start`。Windows 便携版构建：`cd desktop && npm run build:win`。不要把真实 `.env` 提交进仓。
+
+
 ## 安装与配置
 
 Windows / macOS 使用**同一份**交付包（源码 + package-lock）。安装 Node.js >=22.12.0 及其 npm；需要客户自有 MCP 宿主、可用 UpSeller 账号及目标店授权。凭证只存在**每个客户自己电脑**上的 `mcp/.env`（各自填写自己的 `UPSELLER_COOKIE` 与 `UPSELLER_DEVICE_ID`）。不是由交付方本机代写，也不能多人共用同一登录态或拷贝他人 Cookie。公开源码仓不含任何真实密钥；客户拿到代码后仍须本机安装依赖并自填凭据。可用 GitHub 公开仓、本机目录或 zip 交接源码。

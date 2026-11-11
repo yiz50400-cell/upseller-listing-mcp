@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: blob:; script-src 'self'" />
+  <title>自动上架</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-mark">«</span>
+        <span class="brand-name">「自动上架」</span>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-nav="tasks" type="button"><span class="ico">☰</span>任务</button>
+        <button class="nav-item" data-nav="shops" type="button"><span class="ico">⌂</span>店铺</button>
+        <button class="nav-item" data-nav="materials" type="button"><span class="ico">▣</span>素材</button>
+        <button class="nav-item" data-nav="settings" type="button"><span class="ico">⚙</span>设置</button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="user-chip">
+          <span class="avatar">A</span>
+          <div>
+            <div class="user-name" id="userName">本地用户</div>
+            <div class="user-state" id="userState">未登录</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="titlebar">
+        <div class="titlebar-drag">
+          <span class="window-title">「自动上架」</span>
+        </div>
+        <div class="titlebar-right">
+          <span class="login-pill" id="loginPill"><i></i>未登录</span>
+          <div class="win-controls">
+            <button type="button" data-win="min" aria-label="最小化">–</button>
+            <button type="button" data-win="max" aria-label="最大化">□</button>
+            <button type="button" data-win="close" class="close" aria-label="关闭">×</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="page active" id="page-tasks">
+        <div class="task-list-card">
+          <div class="table-head">
+            <div class="col-check"><input type="checkbox" id="checkAll" /></div>
+            <div class="col-product">产品</div>
+            <div class="col-shop">目标店</div>
+            <div class="col-price">价格</div>
+            <div class="col-status">状态</div>
+            <div class="table-tools">
+              <label class="search">
+                <span>⌕</span>
+                <input id="taskSearch" type="search" placeholder="搜索产品 / SKU" />
+              </label>
+              <button type="button" class="icon-btn" id="newTaskBtn" title="新建任务">＋</button>
+            </div>
+          </div>
+          <div class="table-body" id="taskRows"></div>
+        </div>
+
+        <div class="editor-card">
+          <div class="editor-grid">
+            <div class="editor-fields">
+              <label>产品ID
+                <span class="field">
+                  <input id="f-productId" type="text" placeholder="例如 PROD-10023" />
+                  <button type="button" class="ghost" id="loadDraftBtn" title="若这是草稿ID，载入草稿">↩</button>
+                </span>
+              </label>
+              <label>价格
+                <span class="field price-field">
+                  <input id="f-price" type="number" min="0" step="0.01" placeholder="199.99" />
+                  <select id="f-currency">
+                    <option>USD</option>
+                    <option>EUR</option>
+                    <option>GBP</option>
+                    <option>MXN</option>
+                  </select>
+                </span>
+              </label>
+              <label class="full">标题
+                <input id="f-title" type="text" placeholder="产品标题" />
+              </label>
+              <label>目标店铺
+                <select id="f-shop"></select>
+              </label>
+              <label>复制到几店
+                <input id="f-copyCount" type="number" min="1" max="100" value="1" />
+              </label>
+              <label>SKU 前缀
+                <input id="f-skuPrefix" type="text" placeholder="可选" />
+              </label>
+              <label class="full">备注（可选）
+                <input id="f-notes" type="text" placeholder="备注不会写入密钥，仅保存在本机任务" />
+              </label>
+              <label class="full">视频
+                <span class="field">
+                  <input id="f-videoName" type="text" readonly placeholder="当前上架能力尚不处理视频，可先选文件保存在本地" />
+                  <button type="button" class="ghost" id="pickVideoBtn">选择视频</button>
+                  <button type="button" class="ghost" id="clearVideoBtn">清除</button>
+                </span>
+              </label>
+            </div>
+            <div class="editor-media">
+              <div class="media-row">
+                <div class="media-label">主图 <span class="hint">①</span></div>
+                <div class="thumbs" id="mainThumbs"></div>
+                <button type="button" class="add-tile" id="addMain">＋ 添加主图</button>
+              </div>
+              <div class="media-row">
+                <div class="media-label">附图</div>
+                <div class="thumbs" id="galleryThumbs"></div>
+                <button type="button" class="add-tile" id="addGallery">＋ 添加附图</button>
+              </div>
+              <div class="media-row">
+                <div class="media-label">SKU图</div>
+                <div class="thumbs" id="skuThumbs"></div>
+                <button type="button" class="add-tile" id="addSku">＋ 添加SKU图</button>
+              </div>
+            </div>
+          </div>
+          <div class="editor-foot">
+            <div class="foot-id">
+              <div class="foot-title" id="footTitle">未命名任务</div>
+              <div class="foot-sub" id="footSub">先预览，再保存草稿；发布需二次确认</div>
+            </div>
+            <div class="actions">
+              <button type="button" class="btn" id="btnPreview"><span>◎</span> 预览</button>
+              <button type="button" class="btn" id="btnDraft"><span>▢</span> 保存草稿</button>
+              <div class="publish-wrap">
+                <button type="button" class="btn primary" id="btnPublish"><span>☁</span> 发布</button>
+                <div class="publish-hint">发布后需要再次确认</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-shops">
+        <div class="plain-card">
+          <h2>店铺</h2>
+          <p class="lede">在这里添加要复制到的目标店铺。名称仅作本机标识，请填写你自己的店铺，不要沿用示意数据。</p>
+          <div class="row-form">
+            <input id="shopName" type="text" placeholder="店铺名称，例如 目标店铺 A" />
+            <input id="shopId" type="text" placeholder="店铺 ID（可选）" />
+            <button type="button" class="btn primary" id="addShopBtn">添加店铺</button>
+          </div>
+          <div class="list" id="shopList"></div>
+        </div>
+      </section>
+
+      <section class="page" id="page-materials">
+        <div class="plain-card">
+          <h2>素材</h2>
+          <p class="lede">本机素材库，可把图片或视频加入当前任务。视频可保存，但当前上架流程尚不处理视频。</p>
+          <div class="row-form">
+            <button type="button" class="btn" id="addMatImages">添加图片</button>
+            <button type="button" class="btn" id="addMatVideo">添加视频</button>
+          </div>
+          <div class="thumbs wrap" id="matThumbs"></div>
+        </div>
+      </section>
+
+      <section class="page" id="page-settings">
+        <div class="plain-card">
+          <h2>设置</h2>
+          <p class="lede">登录沿用现有本机会话方案（upseller_login / 本机 mcp/.env）。成功只显示长度，不回显 Cookie 或 DeviceId。打开本软件即可使用，不需要安装 Cursor 或 Codex。</p>
+          <dl class="kv" id="authKv"></dl>
+          <div class="row-form">
+            <button type="button" class="btn primary" id="loginBtn">登录 Upseller</button>
+            <button type="button" class="btn" id="refreshAuthBtn">刷新状态</button>
+          </div>
+          <p class="fine">固定每批 8 个商品。默认只预览；保存草稿不会发布；发布必须在弹窗中再次确认。</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal hidden" id="confirmModal">
+    <div class="modal-card">
+      <h3>确认发布？</h3>
+      <p>发布不是默认行为。只有你再次确认后，才会把 <code>confirmPublish=true</code> 交给现有上架能力。预览和保存草稿都不会发布。</p>
+      <div class="row-form end">
+        <button type="button" class="btn" id="cancelPublish">取消</button>
+        <button type="button" class="btn danger" id="confirmPublish">我确认要发布</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
