@@ -4,7 +4,7 @@ import { buildListingTasks, buildImageList, selectedShops } from '../lib/task-bu
 
 test('requires product or draft id and at least one shop', () => {
   assert.throws(() => buildListingTasks({}, []), /请填写产品ID/);
-  assert.throws(() => buildListingTasks({ productId: 'P1' }, []), /请先添加真实店铺/);
+  assert.throws(() => buildListingTasks({ productId: 'P1' }, []), /请先添加店铺/);
 });
 
 test('blocks demo rows and placeholder shops', () => {
@@ -14,7 +14,7 @@ test('blocks demo rows and placeholder shops', () => {
   );
   assert.throws(
     () => buildListingTasks({ productId: 'P1' }, [{ name: '目标店铺 A' }, { name: '目标店铺 B', demo: true }]),
-    /请先添加真实店铺/,
+    /请先添加店铺/,
   );
   const { used } = selectedShops([{ name: '目标店铺 A' }, { name: '店铺甲' }, { name: '目标店铺 C' }], 3);
   assert.equal(used.length, 1);

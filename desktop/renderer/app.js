@@ -59,7 +59,7 @@ function toast(message, isError) {
   el.classList.toggle('err', Boolean(isError));
   el.classList.remove('hidden');
   clearTimeout(toast._t);
-  toast._t = setTimeout(() => el.classList.add('hidden'), 6000);
+  toast._t = setTimeout(() => el.classList.add('hidden'), isError ? 8000 : 6000);
 }
 
 function currentForm() {
@@ -170,16 +170,36 @@ function paintThumbs(id, files, kind) {
   `).join('');
 }
 
+function shopOptionLabel(shop) {
+  const name = shop.name || (shop.id ? `店铺 ${shop.id}` : '未命名');
+  if (shop.expired) return `${name}（已过期）`;
+  if (shop.source === 'manual') return `${name}（手动添加）`;
+  return name;
+}
+
 function renderShops() {
-  const list = realShops(state.shops);
+  const list = (state.shops || []).filter((shop) => shop && (shop.id || shop.name) && !shop.demo);
   const select = $('f-shop');
-  const previous = select.value;
+  const previousId = select.selectedOptions[0]?.dataset.id || '';
+  const previousName = select.selectedOptions[0]?.dataset.name || '';
+  const hint = $('shopHint');
+  if (hint) {
+    hint.textContent = state.shopsError
+      ? state.shopsError
+      : '登录后会自动列出账号里的店，请从列表里点选。手填名称或编号只是备用办法。';
+  }
   if (!list.length) {
-    select.innerHTML = '<option value="" disabled selected>请先添加真实店铺</option>';
+    const empty = state.auth?.loggedIn ? '还没有店铺。登录后仍列不出店时，请点「刷新店铺」。' : '还没有店铺。登录后会自动列出账号里的店。';
+    select.innerHTML = `<option value="" disabled selected>${empty}</option>`;
     return;
   }
-  select.innerHTML = list.map((s, i) => `<option value="${i}" data-name="${escapeAttr(s.name || '')}" data-id="${escapeAttr(s.id || '')}">${escapeHtml(s.name || '未命名')}</option>`).join('');
-  if (previous) select.value = previous;
+  select.innerHTML = list.map((s, i) => {
+    const disabled = s.expired ? ' disabled' : '';
+    return `<option value="${i}" data-name="${escapeAttr(s.name || '')}" data-id="${escapeAttr(s.id || '')}"${disabled}>${escapeHtml(shopOptionLabel(s))}</option>`;
+  }).join('');
+  const match = list.findIndex((s) => (previousId && s.id === previousId) || (!previousId && previousName && s.name === previousName));
+  const firstUsable = list.findIndex((s) => !s.expired);
+  select.value = String(match >= 0 ? match : (firstUsable >= 0 ? firstUsable : 0));
 }
 
 function renderAuth() {
@@ -205,8 +225,14 @@ function escapeHtml(s) {
 }
 function escapeAttr(s) { return escapeHtml(s); }
 
-async function refresh() {
+async function refresh({ refreshShops = true } = {}) {
   state = await api.getState();
+  if (refreshShops && state.auth?.loggedIn && api.refreshShops) {
+    const listed = await api.refreshShops();
+    if (listed) {
+      state = { ...state, ...listed };
+    }
+  }
   if (!state.tasks) state.tasks = [];
   const seeded = ensureTaskList(state, demoTasks);
   state.tasks = seeded.tasks;
@@ -289,11 +315,13 @@ async function run(mode, confirmPublish = false) {
     shops: collectShopsForRun(),
   });
   if (!result?.ok) {
-    toast(result?.error || '操作没完成，请再试一次。', true);
+    const label = mode === 'preview' ? '预览' : mode === 'save-draft' ? '保存草稿' : '发布';
+    const msg = result?.error || '操作没完成，请再试一次。';
+    toast(msg.startsWith(label) ? msg : `${label}：${msg}`, true);
     return result;
   }
   const prefix = mode === 'preview' ? '预览完成，没有写入草稿，也没有发布' : mode === 'save-draft' ? '已请求保存草稿，不会发布' : '已提交发布请求。试用版不宣称已在真机刊登通过';
-  toast(result.videoIgnored ? `${prefix}。所选视频不会进入上架流程。` : prefix);
+  toast(result.videoIgnored ? `${prefix}。所选视频只会留在本机，这一版还不能把视频发出去。` : prefix);
   if (mode === 'save-draft') saved.status = 'draft';
   if (mode === 'publish') saved.status = 'wait';
   await persistTasks(state.tasks);
@@ -400,7 +428,7 @@ $('addShopBtn').addEventListener('click', async () => {
   const name = $('shopName').value.trim();
   const id = $('shopId').value.trim();
   if (!name && !id) return toast('请填写店铺名称或编号', true);
-  state.shops = [...(state.shops || []), { name, id }];
+  state.shops = [...(state.shops || []), { name, id, source: 'manual' }];
   $('shopName').value = '';
   $('shopId').value = '';
   $('shopAddRow').classList.add('hidden');
@@ -415,16 +443,30 @@ $('loginBtn').addEventListener('click', async () => {
   toast('正在打开登录窗口，请在弹出的页面里完成登录');
   const out = await api.login({ timeoutMs: 300000 });
   state.auth = out.auth || state.auth;
+  if (Array.isArray(out.shops)) state.shops = out.shops;
+  if (out.shopsError) state.shopsError = out.shopsError;
   renderAuth();
-  if (out.ok) toast('登录成功');
+  renderShops();
+  if (out.ok) toast(Array.isArray(out.shops) && out.shops.length ? '登录成功，已列出账号里的店铺' : '登录成功');
   else toast(out.error || '登录未完成', true);
 });
-$('refreshAuthBtn').addEventListener('click', refresh);
+$('refreshAuthBtn').addEventListener('click', () => refresh({ refreshShops: true }));
+$('refreshShopsBtn').addEventListener('click', async () => {
+  if (!state.auth?.loggedIn) return toast('请先到「设置」里登录，登录后会自动列出账号里的店。', true);
+  const listed = await api.refreshShops();
+  if (listed) state = { ...state, ...listed };
+  renderShops();
+  if (state.shopsError) toast(state.shopsError, true);
+  else toast(realShops(state.shops).length ? '已更新账号里的店铺' : '账号里还没有可用的店铺');
+});
 $('loadDraftBtn').addEventListener('click', async () => {
   const id = $('f-productId').value.trim();
-  if (!id) return toast('请先填写草稿编号', true);
+  if (!id) return toast('请填写正确的草稿编号。这是 Upseller 里已有草稿的编号，不是随便填一个产品数字。', true);
   const out = await api.loadDraft(id);
-  if (!out.ok) return toast(out.error || '载入草稿失败', true);
+  if (!out.ok) {
+    const msg = out.error || '载入草稿失败';
+    return toast(msg.startsWith('载入草稿') ? msg : `载入草稿：${msg}`, true);
+  }
   const task = ensureTask();
   task.draftId = out.draftId;
   task.productId = out.draft?.itemId || task.productId;

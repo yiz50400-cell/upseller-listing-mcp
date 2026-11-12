@@ -67,12 +67,12 @@ export function sanitizeDraft(data) {
 export async function upsellerGetDraft(client, input) {
   const draftId = input?.draftId;
   if (draftId == null || draftId === "") {
-    throw new Error("draftId is required");
+    throw new Error("请填写正确的草稿编号。");
   }
   const res = await client.get(PATHS.edit, { id: String(draftId) });
   const json = assertApiOk(res, PATHS.edit);
   const data = json?.data;
-  if (!data) throw new Error("edit response missing data");
+  if (!data) throw new Error("找不到这份草稿，请填写正确的草稿编号。");
   return {
     ok: true,
     draftId: String(draftId),

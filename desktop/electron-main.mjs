@@ -5,9 +5,10 @@ import { fileURLToPath } from 'node:url';
 import { pathToFileURL } from 'node:url';
 import { resolveEnvPath, toolkitRoot } from './lib/paths.mjs';
 import { loadState, saveState } from './lib/task-store.mjs';
-import { loginWithExistingScheme, runFormAction, loadDraft, safeError, verifiedAuth } from './lib/listing-service.mjs';
+import { loginWithExistingScheme, runFormAction, loadDraft, listAccountShops, safeError, verifiedAuth } from './lib/listing-service.mjs';
 import { captureSessionWithElectron } from './lib/electron-login.mjs';
-import { sanitizeForUi } from './lib/sanitize.mjs';
+import { sanitizeForUi, friendlyErrorMessage } from './lib/sanitize.mjs';
+import { mergeShops } from './lib/shop-list.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const packaged = app.isPackaged;
@@ -53,11 +54,26 @@ function createWindow() {
   return win;
 }
 
-async function snapshot(userDataDir, envPath, toolkit) {
+async function snapshot(userDataDir, envPath, toolkit, { refreshShops = false } = {}) {
   const state = loadState(userDataDir);
+  const auth = await verifiedAuth({ toolkitRoot: toolkit, envPath });
+  let shops = Array.isArray(state.shops) ? state.shops : [];
+  let shopsError = '';
+  if (refreshShops && auth.loggedIn) {
+    try {
+      const listed = await listAccountShops({ toolkitRoot: toolkit, envPath });
+      const next = mergeShops(state.shops, listed.shops);
+      shops = next;
+      saveState(userDataDir, { ...loadState(userDataDir), shops: next });
+    } catch (err) {
+      shopsError = friendlyErrorMessage(err);
+    }
+  }
   return {
     ...state,
-    auth: await verifiedAuth({ toolkitRoot: toolkit, envPath }),
+    shops,
+    shopsError,
+    auth,
     meta: {
       packaged,
       productConcurrency: 8,
@@ -81,6 +97,7 @@ app.whenReady().then(() => {
   fs.mkdirSync(path.join(userDataDir, 'mcp'), { recursive: true });
 
   ipcMain.handle('desktop:getState', async () => snapshot(userDataDir, envPath, toolkit));
+  ipcMain.handle('desktop:refreshShops', async () => snapshot(userDataDir, envPath, toolkit, { refreshShops: true }));
 
   ipcMain.handle('desktop:saveState', async (_evt, patch = {}) => {
     const current = loadState(userDataDir);
@@ -113,9 +130,10 @@ app.whenReady().then(() => {
             startUrl: options.startUrl,
           }),
         });
-        return { ...out, auth: await verifiedAuth({ toolkitRoot: toolkit, envPath }) };
+        const snap = await snapshot(userDataDir, envPath, toolkit, { refreshShops: true });
+        return { ...out, auth: snap.auth, shops: snap.shops, shopsError: snap.shopsError };
       } catch (err) {
-        return { ...safeError(err), auth: await verifiedAuth({ toolkitRoot: toolkit, envPath }) };
+        return { ...safeError(err), ...(await snapshot(userDataDir, envPath, toolkit)) };
       } finally {
         loginInFlight = null;
       }

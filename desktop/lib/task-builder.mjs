@@ -44,7 +44,7 @@ export function buildListingTasks(form, shops, { publish = false } = {}) {
   const productId = clean(form.productId);
   const draftId = clean(form.draftId);
   const shopPick = selectedShops(shops, form.copyToShopCount);
-  if (shopPick.used.length < 1) throw new Error('请先添加真实店铺。');
+  if (shopPick.used.length < 1) throw new Error('请先添加店铺。');
   if (shopPick.used.length < shopPick.wanted) {
     // still proceed with what we have, but surface a warning
   }

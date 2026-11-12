@@ -6,7 +6,7 @@ import { sanitizeForUi, safeError } from './sanitize.mjs';
 
 async function loadTools(toolkitRoot) {
   const src = path.join(toolkitRoot, 'mcp', 'src');
-  const [{ createClient }, { upsellerLogin }, { upsellerRunListing }, { upsellerRunBatch }, { upsellerGetDraft }, { probeUpsellerSession }] =
+  const [{ createClient }, { upsellerLogin }, { upsellerRunListing }, { upsellerRunBatch }, { upsellerGetDraft }, { probeUpsellerSession }, { listShops }] =
     await Promise.all([
       import(pathToFileURL(path.join(src, 'client.js')).href),
       import(pathToFileURL(path.join(src, 'tools/login.js')).href),
@@ -14,8 +14,9 @@ async function loadTools(toolkitRoot) {
       import(pathToFileURL(path.join(src, 'tools/run_batch.js')).href),
       import(pathToFileURL(path.join(src, 'tools/get_draft.js')).href),
       import(pathToFileURL(path.join(src, 'auth/session_probe.js')).href),
+      import(pathToFileURL(path.join(src, 'task_resolver.js')).href),
     ]);
-  return { createClient, upsellerLogin, upsellerRunListing, upsellerRunBatch, upsellerGetDraft, probeUpsellerSession };
+  return { createClient, upsellerLogin, upsellerRunListing, upsellerRunBatch, upsellerGetDraft, probeUpsellerSession, listShops };
 }
 
 /** Live auth check. Returns lengths and booleans only — never Cookie or DeviceId values. */
@@ -119,13 +120,31 @@ export async function runFormAction({ toolkitRoot, envPath, form, shops, mode, c
   });
 }
 
+export async function listAccountShops({ toolkitRoot, envPath }) {
+  applySessionEnv(envPath);
+  const { createClient, listShops } = await loadTools(toolkitRoot);
+  const client = clientOrThrow(createClient);
+  const rows = await listShops(client);
+  const shops = (Array.isArray(rows) ? rows : []).map((row) => ({
+    id: String(row?.id ?? '').trim(),
+    name: String(row?.name ?? '').trim(),
+    site: row?.site ? String(row.site) : '',
+    expired: Boolean(row?.expired),
+    source: 'account',
+  })).filter((shop) => shop.id || shop.name);
+  return sanitizeForUi({ ok: true, shops });
+}
+
 export async function loadDraft({ toolkitRoot, envPath, draftId }) {
   applySessionEnv(envPath);
   const auth = await verifiedAuth({ toolkitRoot, envPath });
   if (!auth.loggedIn) return { ok: false, error: auth.expired || auth.present ? '请重新登录。' : '请先到「设置」里登录。', auth };
+  if (draftId == null || String(draftId).trim() === '') {
+    return { ok: false, error: '请填写正确的草稿编号。', auth };
+  }
   const { createClient, upsellerGetDraft } = await loadTools(toolkitRoot);
   const client = clientOrThrow(createClient);
-  const out = await upsellerGetDraft(client, { draftId });
+  const out = await upsellerGetDraft(client, { draftId: String(draftId).trim() });
   return sanitizeForUi({
     ok: true,
     draftId: out.draftId,
