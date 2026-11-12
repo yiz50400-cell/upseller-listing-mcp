@@ -1,5 +1,6 @@
 import { ensureTaskList, deleteTasks, createProduct, nextSelectedId, visibleTasks as filterTasks } from './task-list.mjs';
 import { realShops, isPlaceholderShopName, runBlockReason } from './run-guards.mjs';
+import { applyDraftFields, findShopOption } from '../lib/draft-form.mjs';
 
 const api = window.upsellerDesktop;
 
@@ -108,10 +109,8 @@ function applyForm(task) {
     ? '示意内容，不会拿去上架'
     : (task.skuPrefix ? `编号 ${task.skuPrefix}` : '先预览，再保存草稿');
   const shopSel = $('f-shop');
-  if (task.shopId || task.shopName) {
-    const match = [...shopSel.options].find((o) => o.dataset.id === task.shopId || o.dataset.name === task.shopName);
-    if (match) shopSel.value = match.value;
-  }
+  const match = findShopOption([...shopSel.options], task);
+  if (match) shopSel.value = match.value;
   renderThumbs();
 }
 
@@ -148,7 +147,7 @@ function renderRows() {
     const checked = checkedIds.has(t.id) ? 'checked' : '';
     return `<div class="task-row ${selected}" data-id="${t.id}">
       <div class="col-check"><input type="checkbox" data-check="${escapeAttr(t.id)}" ${checked} aria-label="选择 ${escapeAttr(t.title || '任务')}" /></div>
-      <div class="product-cell">${thumb}<div><div class="prod-name">${escapeHtml(t.title || '未命名')}${t.demo ? '<span class="badge demo">示意</span>' : ''}</div><div class="prod-sku">${escapeHtml(t.skuPrefix ? 'SKU: ' + t.skuPrefix : (t.productId || ''))}</div></div></div>
+      <div class="product-cell">${thumb}<div class="prod-meta"><div class="prod-name">${escapeHtml(t.title || '未命名')}${t.demo ? '<span class="badge demo">示意</span>' : ''}</div><div class="prod-sku">${escapeHtml(t.skuPrefix ? 'SKU: ' + t.skuPrefix : (t.productId || ''))}</div></div></div>
       <div class="shop-cell">${escapeHtml(t.shopName || '未指定')}${t.site ? `<small>(${escapeHtml(t.site)})</small>` : ''}</div>
       <div class="price-cell">${escapeHtml(String(t.price || '—'))}<div class="prod-sku">${escapeHtml(t.currency || '')}</div></div>
       <div class="status-cell">${statusBadge(t)}${t.demo ? '' : escapeHtml(t.age || '')}</div>
@@ -484,14 +483,10 @@ $('loadDraftBtn').addEventListener('click', async () => {
     return toast(msg.startsWith('载入草稿') ? msg : `载入草稿：${msg}`, true);
   }
   const task = ensureTask();
-  task.draftId = out.draftId;
-  task.productId = out.draft?.itemId || task.productId;
-  task.title = out.draft?.itemTitle || task.title;
-  task.price = out.draft?.price ?? task.price;
-  task.currency = out.draft?.currency || task.currency;
-  task.shopName = out.draft?.shopName || task.shopName;
+  Object.assign(task, applyDraftFields(task, out.draft, out.draftId));
   await persistTasks(state.tasks);
   applyForm(task);
+  renderRows();
   toast('已载入草稿');
 });
 
