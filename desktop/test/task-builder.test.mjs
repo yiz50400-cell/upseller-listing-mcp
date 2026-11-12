@@ -3,8 +3,22 @@ import assert from 'node:assert/strict';
 import { buildListingTasks, buildImageList, selectedShops } from '../lib/task-builder.mjs';
 
 test('requires product or draft id and at least one shop', () => {
-  assert.throws(() => buildListingTasks({}, []), /产品ID或草稿ID/);
-  assert.throws(() => buildListingTasks({ productId: 'P1' }, []), /目标店铺/);
+  assert.throws(() => buildListingTasks({}, []), /请填写产品ID/);
+  assert.throws(() => buildListingTasks({ productId: 'P1' }, []), /请先添加真实店铺/);
+});
+
+test('blocks demo rows and placeholder shops', () => {
+  assert.throws(
+    () => buildListingTasks({ productId: 'P1', demo: true }, [{ name: '店铺甲' }]),
+    /示意商品不能预览或上架/,
+  );
+  assert.throws(
+    () => buildListingTasks({ productId: 'P1' }, [{ name: '目标店铺 A' }, { name: '目标店铺 B', demo: true }]),
+    /请先添加真实店铺/,
+  );
+  const { used } = selectedShops([{ name: '目标店铺 A' }, { name: '店铺甲' }, { name: '目标店铺 C' }], 3);
+  assert.equal(used.length, 1);
+  assert.equal(used[0].name, '店铺甲');
 });
 
 test('builds one task per selected shop and omits video', () => {
@@ -38,7 +52,7 @@ test('builds one task per selected shop and omits video', () => {
 });
 
 test('publish flag is explicit and main image is unique', () => {
-  const shops = [{ name: '目标店铺 A' }];
+  const shops = [{ name: '店铺甲' }];
   const published = buildListingTasks({ draftId: 'D1', copyToShopCount: 1 }, shops, { publish: true });
   assert.equal(published.tasks[0].publish, true);
   assert.throws(() => buildImageList({ mainImages: ['a.jpg', 'b.jpg'] }), /主图只能选一张/);

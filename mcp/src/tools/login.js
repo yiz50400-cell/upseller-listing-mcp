@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { writeSessionEnv } from '../auth/session_env.js';
+import { writeSessionEnv, sessionMeetsMinimum } from '../auth/session_env.js';
 import { captureSessionWithPlaywright } from '../auth/playwright_capture.js';
 
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -22,7 +22,7 @@ export async function upsellerLogin(args = {}, options = {}, deps = {}) {
   });
   const cookie = String(session?.cookie || '');
   const deviceId = String(session?.deviceId || '');
-  if (cookie.length < 8 || deviceId.length < 8) {
+  if (!sessionMeetsMinimum(cookie, deviceId)) {
     throw new Error('未能从浏览器会话提取有效 Cookie/DeviceId；请确认已在打开的页面登录 Upseller');
   }
   const written = writeSessionEnv({ cookie, deviceId, envPath });

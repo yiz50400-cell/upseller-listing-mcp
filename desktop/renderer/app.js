@@ -1,4 +1,5 @@
 import { ensureTaskList, deleteTasks, createProduct, nextSelectedId, visibleTasks as filterTasks } from './task-list.mjs';
+import { realShops, isPlaceholderShopName, runBlockReason } from './run-guards.mjs';
 
 const api = window.upsellerDesktop;
 
@@ -82,6 +83,7 @@ function currentForm() {
     video: formVideo || task.video || '',
     shopName,
     shopId,
+    demo: Boolean(task.demo),
   };
 }
 
@@ -108,16 +110,19 @@ function applyForm(task) {
 }
 
 function collectShopsForRun() {
-  const form = currentForm();
-  const fromState = (state.shops || []).filter((s) => !s.demo);
+  const fromState = realShops(state.shops);
   if (fromState.length) return fromState;
-  if (form.shopId || form.shopName) return [{ id: form.shopId, name: form.shopName }];
+  const form = currentForm();
+  if ((form.shopId || form.shopName) && !isPlaceholderShopName(form.shopName)) {
+    return realShops([{ id: form.shopId, name: form.shopName }]);
+  }
   return [];
 }
 
-function statusBadge(status) {
-  if (status === 'live') return '<span class="badge live"><i></i>已发布</span>';
-  if (status === 'wait') return '<span class="badge wait"><i></i>待发布</span>';
+function statusBadge(task) {
+  if (task.demo) return '<span class="badge demo-status">示例</span>';
+  if (task.status === 'live') return '<span class="badge live"><i></i>已发布</span>';
+  if (task.status === 'wait') return '<span class="badge wait"><i></i>待发布</span>';
   return '<span class="badge draft"><i></i>草稿</span>';
 }
 
@@ -140,7 +145,7 @@ function renderRows() {
       <div class="product-cell">${thumb}<div><div class="prod-name">${escapeHtml(t.title || '未命名')}${t.demo ? '<span class="badge demo">示意</span>' : ''}</div><div class="prod-sku">${escapeHtml(t.skuPrefix ? 'SKU: ' + t.skuPrefix : (t.productId || ''))}</div></div></div>
       <div class="shop-cell">${escapeHtml(t.shopName || '未指定')}${t.site ? `<small>(${escapeHtml(t.site)})</small>` : ''}</div>
       <div class="price-cell">${escapeHtml(String(t.price || '—'))}<div class="prod-sku">${escapeHtml(t.currency || '')}</div></div>
-      <div class="status-cell">${statusBadge(t.status)}${escapeHtml(t.age || '')}</div>
+      <div class="status-cell">${statusBadge(t)}${t.demo ? '' : escapeHtml(t.age || '')}</div>
       <div class="col-actions"><button type="button" class="row-del" data-delete="${escapeAttr(t.id)}">删除</button></div>
     </div>`;
   }).join('');
@@ -166,21 +171,33 @@ function paintThumbs(id, files, kind) {
 }
 
 function renderShops() {
-  const list = state.shops || [];
+  const list = realShops(state.shops);
   const select = $('f-shop');
   const previous = select.value;
-  const options = list.length ? list : [{ name: '目标店铺 A', id: '', demo: true }, { name: '目标店铺 B', id: '', demo: true }, { name: '目标店铺 C', id: '', demo: true }];
-  select.innerHTML = options.map((s, i) => `<option value="${i}" data-name="${escapeAttr(s.name || '')}" data-id="${escapeAttr(s.id || '')}">${escapeHtml(s.name || '未命名')}${s.demo ? '（示意）' : ''}</option>`).join('');
+  if (!list.length) {
+    select.innerHTML = '<option value="" disabled selected>请先添加真实店铺</option>';
+    return;
+  }
+  select.innerHTML = list.map((s, i) => `<option value="${i}" data-name="${escapeAttr(s.name || '')}" data-id="${escapeAttr(s.id || '')}">${escapeHtml(s.name || '未命名')}</option>`).join('');
   if (previous) select.value = previous;
 }
 
 function renderAuth() {
   const auth = state.auth || {};
   const loggedIn = Boolean(auth.loggedIn);
+  let status = '未登录';
+  if (loggedIn) status = '已登录 Upseller';
+  else if (auth.expired) status = '登录已失效，请重新登录';
+  else if (auth.present && auth.networkError) status = '无法确认登录状态';
   $('loginPill').classList.toggle('on', loggedIn);
-  $('loginPill').innerHTML = loggedIn ? '<i></i>已登录' : '<i></i>未登录';
-  $('userState').textContent = loggedIn ? '已登录' : '未登录';
-  $('authStatus').textContent = loggedIn ? '当前已登录' : '当前未登录';
+  $('loginPill').innerHTML = loggedIn ? '<i></i>已登录 Upseller' : '<i></i>未登录';
+  $('userState').textContent = loggedIn ? '已登录 Upseller' : '未登录';
+  $('authStatus').textContent = status;
+  const loginBtn = $('loginBtn');
+  loginBtn.textContent = loggedIn ? '重新登录' : '登录 Upseller';
+  loginBtn.classList.toggle('primary', !loggedIn);
+  const hint = $('authHint');
+  if (hint) hint.textContent = loggedIn ? '登录失效时，请重新登录。' : '登录后才能预览和保存草稿。';
 }
 
 function escapeHtml(s) {
@@ -217,7 +234,8 @@ function ensureTask() {
     state.tasks = [task, ...state.tasks];
   }
   const form = currentForm();
-  Object.assign(task, form, { id: task.id, status: task.status || 'draft', demo: false });
+  const keepDemo = Boolean(task.demo);
+  Object.assign(task, form, { id: task.id, status: task.status || 'draft', demo: keepDemo });
   return task;
 }
 
@@ -255,7 +273,14 @@ async function addImages(kind) {
 }
 
 async function run(mode, confirmPublish = false) {
-  const task = ensureTask();
+  const task = state.tasks.find((t) => t.id === selectedId);
+  const form = task ? { ...currentForm(), demo: Boolean(task.demo) } : currentForm();
+  const blocked = runBlockReason({ form, shops: collectShopsForRun(), demo: Boolean(form.demo) });
+  if (blocked) {
+    toast(blocked, true);
+    return { ok: false, error: blocked };
+  }
+  const saved = ensureTask();
   await persistTasks(state.tasks);
   const result = await api.runAction({
     mode,
@@ -264,13 +289,13 @@ async function run(mode, confirmPublish = false) {
     shops: collectShopsForRun(),
   });
   if (!result?.ok) {
-    toast(result?.error || '操作未完成', true);
+    toast(result?.error || '操作没完成，请再试一次。', true);
     return result;
   }
   const prefix = mode === 'preview' ? '预览完成，没有写入草稿，也没有发布' : mode === 'save-draft' ? '已请求保存草稿，不会发布' : '已提交发布请求。试用版不宣称已在真机刊登通过';
   toast(result.videoIgnored ? `${prefix}。所选视频不会进入上架流程。` : prefix);
-  if (mode === 'save-draft') task.status = 'draft';
-  if (mode === 'publish') task.status = 'wait';
+  if (mode === 'save-draft') saved.status = 'draft';
+  if (mode === 'publish') saved.status = 'wait';
   await persistTasks(state.tasks);
   renderRows();
   return result;
@@ -381,7 +406,8 @@ $('addShopBtn').addEventListener('click', async () => {
   $('shopAddRow').classList.add('hidden');
   await api.saveState({ shops: state.shops });
   renderShops();
-  $('f-shop').value = String(state.shops.length - 1);
+  const real = realShops(state.shops);
+  if (real.length) $('f-shop').value = String(real.length - 1);
   toast('已添加店铺');
 });
 

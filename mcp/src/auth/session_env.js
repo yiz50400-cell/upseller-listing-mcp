@@ -27,9 +27,53 @@ function headerGet(headers, name) {
   return '';
 }
 
+/** Minimum lengths for a session that is worth probing. Far above a trivial 8-character token. */
+export const MIN_COOKIE_LEN = 32;
+export const MIN_DEVICE_ID_LEN = 16;
+
+export function sessionMeetsMinimum(cookie, deviceId) {
+  return String(cookie || '').length >= MIN_COOKIE_LEN && String(deviceId || '').length >= MIN_DEVICE_ID_LEN;
+}
+
+function cookiePairs(str) {
+  const pairs = [];
+  for (const part of String(str || '').split(';')) {
+    const piece = part.trim();
+    const i = piece.indexOf('=');
+    if (i <= 0) continue;
+    pairs.push([piece.slice(0, i).trim(), piece.slice(i + 1)]);
+  }
+  return pairs;
+}
+
+/** Merge Cookie header strings and jar cookies by name, keeping first-seen order and the longer value. */
+export function mergeCookieStrings(...strs) {
+  const map = new Map();
+  const order = [];
+  for (const s of strs) {
+    for (const [name, value] of cookiePairs(s)) {
+      if (!name) continue;
+      if (!map.has(name)) order.push(name);
+      const prev = map.get(name);
+      if (prev == null || String(value).length > String(prev).length) map.set(name, value);
+    }
+  }
+  return order.map((name) => `${name}=${map.get(name)}`).join('; ');
+}
+
+export function cookieStringFromJar(cookies = []) {
+  const parts = [];
+  for (const c of cookies) {
+    const domain = String(c.domain || '');
+    if (domain && !/upseller\.com/i.test(domain)) continue;
+    if (c?.name) parts.push(`${c.name}=${c.value ?? ''}`);
+  }
+  return parts.join('; ');
+}
+
 /** Extract Cookie + DeviceId from network header events and/or cookie jar entries. Never returns raw dumps beyond the two fields. */
 export function extractSession({ headerEvents = [], cookies = [] } = {}) {
-  let cookie = '';
+  let headerCookie = '';
   let deviceId = '';
   for (const evt of headerEvents) {
     const url = String(evt?.url || '');
@@ -40,26 +84,18 @@ export function extractSession({ headerEvents = [], cookies = [] } = {}) {
       headerGet(headers, 'DeviceId') ||
       headerGet(headers, 'deviceId') ||
       headerGet(headers, 'deviceid');
-    if (c && c.length > cookie.length) cookie = c;
-    if (d && d.length >= 8 && (!deviceId || d.length >= deviceId.length)) deviceId = d;
+    if (c && c.length > headerCookie.length) headerCookie = c;
+    if (d && d.length >= MIN_DEVICE_ID_LEN && (!deviceId || d.length >= deviceId.length)) deviceId = d;
   }
-  if ((!cookie || cookie.length < 8) && Array.isArray(cookies) && cookies.length) {
-    const parts = [];
-    for (const c of cookies) {
-      const domain = String(c.domain || '');
-      if (domain && !/upseller\.com/i.test(domain)) continue;
-      if (c?.name) parts.push(`${c.name}=${c.value ?? ''}`);
-    }
-    if (parts.length) cookie = parts.join('; ');
-  }
+  const jarCookie = cookieStringFromJar(cookies);
+  const cookie = mergeCookieStrings(headerCookie, jarCookie);
   return { cookie, deviceId };
 }
 
 export function writeSessionEnv({ cookie, deviceId, envPath }) {
   const c = String(cookie || '');
   const d = String(deviceId || '');
-  if (c.length < 8) throw new Error('登录会话 Cookie 过短或缺失');
-  if (d.length < 8) throw new Error('登录会话 DeviceId 过短或缺失');
+  if (!sessionMeetsMinimum(c, d)) throw new Error('登录会话 Cookie 或 DeviceId 过短或缺失');
   const target = path.resolve(envPath);
   fs.mkdirSync(path.dirname(target), { recursive: true });
   const body =

@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { extractSession } from './session_env.js';
+import { extractSession, sessionMeetsMinimum } from './session_env.js';
 
 const DEFAULT_URL = 'https://app.upseller.com/zh-CN/';
 const LOGIN_HINT = 'https://app.upseller.com/zh-CN/login';
@@ -62,19 +62,19 @@ export async function captureSessionWithPlaywright(options = {}) {
     const deadline = Date.now() + timeoutMs;
     let last = { cookie: '', deviceId: '' };
     while (Date.now() < deadline) {
-      const jar = await context.cookies('https://app.upseller.com').catch(() => []);
+      const jar = (await context.cookies().catch(() => [])) || [];
       last = extractSession({ headerEvents, cookies: jar });
-      if (last.cookie.length >= 8 && last.deviceId.length >= 8) {
+      if (sessionMeetsMinimum(last.cookie, last.deviceId)) {
         return { cookie: last.cookie, deviceId: last.deviceId, source: 'playwright' };
       }
       // If still on a clearly logged-out shell, nudge to login page once.
       const url = page.url();
-      if (/login|signin|passport/i.test(url) === false && last.cookie.length < 8) {
+      if (/login|signin|passport/i.test(url) === false && !sessionMeetsMinimum(last.cookie, last.deviceId)) {
         // stay; user may already be in app — wait for API traffic to emit DeviceId
       }
       await page.waitForTimeout(1000);
     }
-    if (last.cookie.length >= 8 && last.deviceId.length < 8) {
+    if (String(last.cookie || '').length >= 32 && String(last.deviceId || '').length < 16) {
       throw new Error('已捕获 Cookie，但仍缺少 DeviceId：请在已打开的页面稍作操作（进入店铺/草稿）后重试');
     }
     throw new Error('等待登录超时：请在弹出的浏览器中登录 Upseller 后重试（保持窗口完成登录）');

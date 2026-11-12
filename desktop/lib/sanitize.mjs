@@ -58,9 +58,24 @@ export function friendlyErrorMessage(err) {
   if (/发布必须二次确认/i.test(blob)) {
     return '发布需要再确认一次。';
   }
-  const first = blob.split(/[\n\r]/)[0].trim();
-  const looksTechnical = /at\s+\S+\s+\(|\.(mjs|js|ts):\d+|node_modules|\\Users\\|\/Users\/|\/Library\/|stack|TypeError|Unhandled/i.test(blob);
-  if (/[\u4e00-\u9fff]/.test(first) && !looksTechnical) {
+  const cleaned = blob.replace(/^Error:\s*/i, '');
+  const first = cleaned.split(/[\n\r]/)[0].trim();
+  if (/示意商品/.test(cleaned)) {
+    return '示意商品不能预览或上架，请先添加真实产品并填写产品ID。';
+  }
+  if (/请填写产品ID|请填写产品ID或草稿ID|产品ID或草稿ID/.test(first) || (/产品ID|草稿ID/.test(first) && /填写|缺少/.test(first))) {
+    return '请填写产品ID。';
+  }
+  if (/店铺页|目标店铺|真实店铺|请先添加.*店铺/.test(first)) {
+    return '请先添加真实店铺。';
+  }
+  if (/尚未登录|登录已失效|请重新登录|请先到「设置」/.test(first)) {
+    return /已失效|过期|失效/.test(first) ? '请重新登录。' : '请先到「设置」里登录。';
+  }
+  // If the first line is already a clear Chinese reason, keep it even when a
+  // stack or path appears later in the same blob.
+  const firstLooksTechnical = /at\s+\S+\s+\(|\.(mjs|js|ts):\d+|node_modules|\\Users\\|\/Users\/|\/Library\/|TypeError|Unhandled/i.test(first);
+  if (/[\u4e00-\u9fff]/.test(first) && !firstLooksTechnical) {
     return first.length > 80 ? `${first.slice(0, 80)}…` : first;
   }
   return '操作没完成，请再试一次。';

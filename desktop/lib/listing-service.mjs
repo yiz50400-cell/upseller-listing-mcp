@@ -1,20 +1,43 @@
 import { pathToFileURL } from 'node:url';
 import path from 'node:path';
-import { applySessionEnv, readAuthStatus } from './auth-status.mjs';
-import { buildListingTasks } from './task-builder.mjs';
+import { applySessionEnv, readAuthStatus, loadSessionEnv } from './auth-status.mjs';
+import { buildListingTasks, realShops } from './task-builder.mjs';
 import { sanitizeForUi, safeError } from './sanitize.mjs';
 
 async function loadTools(toolkitRoot) {
   const src = path.join(toolkitRoot, 'mcp', 'src');
-  const [{ createClient }, { upsellerLogin }, { upsellerRunListing }, { upsellerRunBatch }, { upsellerGetDraft }] =
+  const [{ createClient }, { upsellerLogin }, { upsellerRunListing }, { upsellerRunBatch }, { upsellerGetDraft }, { probeUpsellerSession }] =
     await Promise.all([
       import(pathToFileURL(path.join(src, 'client.js')).href),
       import(pathToFileURL(path.join(src, 'tools/login.js')).href),
       import(pathToFileURL(path.join(src, 'tools/run_listing.js')).href),
       import(pathToFileURL(path.join(src, 'tools/run_batch.js')).href),
       import(pathToFileURL(path.join(src, 'tools/get_draft.js')).href),
+      import(pathToFileURL(path.join(src, 'auth/session_probe.js')).href),
     ]);
-  return { createClient, upsellerLogin, upsellerRunListing, upsellerRunBatch, upsellerGetDraft };
+  return { createClient, upsellerLogin, upsellerRunListing, upsellerRunBatch, upsellerGetDraft, probeUpsellerSession };
+}
+
+/** Live auth check. Returns lengths and booleans only — never Cookie or DeviceId values. */
+export async function verifiedAuth({ toolkitRoot, envPath }) {
+  const base = readAuthStatus(envPath);
+  if (!base.present) return base;
+  const parsed = loadSessionEnv(envPath);
+  const { probeUpsellerSession, createClient } = await loadTools(toolkitRoot);
+  const probe = await probeUpsellerSession({
+    cookie: parsed.UPSELLER_COOKIE,
+    deviceId: parsed.UPSELLER_DEVICE_ID,
+    clientFactory: createClient,
+  });
+  return {
+    ...base,
+    ok: Boolean(probe.loggedIn),
+    loggedIn: Boolean(probe.loggedIn),
+    verified: Boolean(probe.verified),
+    expired: Boolean(probe.expired),
+    present: true,
+    networkError: Boolean(probe.networkError),
+  };
 }
 
 function clientOrThrow(createClient) {
@@ -34,8 +57,9 @@ export async function loginWithExistingScheme({ toolkitRoot, envPath, timeoutMs,
     timeoutMs: timeoutMs ?? 300000,
   }, {}, deps);
   applySessionEnv(envPath);
+  const auth = await verifiedAuth({ toolkitRoot, envPath });
   return sanitizeForUi({
-    ok: Boolean(out.ok),
+    ok: Boolean(out.ok) && Boolean(auth.loggedIn),
     stage: out.stage,
     envPath: out.envPath,
     cookieLen: out.cookieLen,
@@ -43,7 +67,7 @@ export async function loginWithExistingScheme({ toolkitRoot, envPath, timeoutMs,
     mode: out.mode,
     source: out.source,
     hint: out.hint,
-    auth: readAuthStatus(envPath),
+    auth,
   });
 }
 
@@ -56,10 +80,15 @@ export async function runFormAction({ toolkitRoot, envPath, form, shops, mode, c
   }
 
   const publish = mode === 'publish';
-  const built = buildListingTasks(form, shops, { publish });
-  const auth = applySessionEnv(envPath);
+  const usableShops = realShops(shops);
+  const built = buildListingTasks(form, usableShops, { publish });
+  applySessionEnv(envPath);
+  const auth = await verifiedAuth({ toolkitRoot, envPath });
   if (!auth.loggedIn) {
-    return { ok: false, error: '尚未登录。请先在「设置」中登录 Upseller（成功只回长度，不回显凭证）。', auth, warnings: built.warnings };
+    const error = auth.expired || auth.present
+      ? '请重新登录。'
+      : '请先到「设置」里登录。';
+    return { ok: false, error, auth, warnings: built.warnings };
   }
 
   const { createClient, upsellerRunListing, upsellerRunBatch } = await loadTools(toolkitRoot);
@@ -91,8 +120,9 @@ export async function runFormAction({ toolkitRoot, envPath, form, shops, mode, c
 }
 
 export async function loadDraft({ toolkitRoot, envPath, draftId }) {
-  const auth = applySessionEnv(envPath);
-  if (!auth.loggedIn) return { ok: false, error: '尚未登录', auth };
+  applySessionEnv(envPath);
+  const auth = await verifiedAuth({ toolkitRoot, envPath });
+  if (!auth.loggedIn) return { ok: false, error: auth.expired || auth.present ? '请重新登录。' : '请先到「设置」里登录。', auth };
   const { createClient, upsellerGetDraft } = await loadTools(toolkitRoot);
   const client = clientOrThrow(createClient);
   const out = await upsellerGetDraft(client, { draftId });

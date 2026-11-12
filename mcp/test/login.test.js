@@ -45,6 +45,7 @@ test('extractSession prefers longest upseller Cookie header and DeviceId variant
     cookies: [{ name: 'sid', value: 'fromjar', domain: '.upseller.com' }],
   });
   assert.ok(out.cookie.includes('c=333'));
+  assert.ok(out.cookie.includes('sid=fromjar'));
   assert.equal(out.deviceId, '11111111-2222-3333-4444-555555555555');
   assert.ok(!('raw' in out));
 });

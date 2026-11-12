@@ -11,8 +11,7 @@
   <div class="app">
     <aside class="sidebar">
       <div class="brand">
-        <span class="brand-mark">«</span>
-        <span class="brand-name">「自动上架」</span>
+        <span class="brand-name">自动上架</span>
       </div>
       <nav class="nav">
         <button class="nav-item active" data-nav="tasks" type="button"><span class="ico">☰</span>任务</button>
@@ -32,7 +31,7 @@
     <main class="main">
       <header class="titlebar">
         <div class="titlebar-drag">
-          <span class="window-title">「自动上架」</span>
+          <span class="window-title">自动上架</span>
         </div>
         <div class="titlebar-right">
           <span class="login-pill" id="loginPill"><i></i>未登录</span>
@@ -46,6 +45,16 @@
 
       <section class="page active" id="page-tasks">
         <div class="task-list-card">
+          <div class="list-toolbar">
+            <label class="search">
+              <span>搜索</span>
+              <input id="taskSearch" type="search" placeholder="搜索产品或编号" />
+            </label>
+            <div class="list-toolbar-actions">
+              <button type="button" class="btn" id="deleteSelectedBtn">删除所选</button>
+              <button type="button" class="btn primary" id="newTaskBtn">添加产品</button>
+            </div>
+          </div>
           <div class="table-head">
             <div class="col-check"><input type="checkbox" id="checkAll" aria-label="全选任务" /></div>
             <div class="col-product">产品</div>
@@ -53,14 +62,6 @@
             <div class="col-price">价格</div>
             <div class="col-status">状态</div>
             <div class="col-actions">操作</div>
-            <div class="table-tools">
-              <label class="search">
-                <span>⌕</span>
-                <input id="taskSearch" type="search" placeholder="搜索产品或编号" />
-              </label>
-              <button type="button" class="btn" id="deleteSelectedBtn">删除所选</button>
-              <button type="button" class="btn primary" id="newTaskBtn">添加产品</button>
-            </div>
           </div>
           <div class="table-body" id="taskRows"></div>
           <div class="empty-tasks hidden" id="emptyTasks">还没有产品。点「添加产品」即可新增一行，再填写产品信息。</div>
@@ -72,7 +73,7 @@
               <label>产品ID
                 <span class="field">
                   <input id="f-productId" type="text" placeholder="填写产品或草稿编号" />
-                  <button type="button" class="ghost" id="loadDraftBtn" title="载入草稿">↩</button>
+                  <button type="button" class="ghost text-btn" id="loadDraftBtn">载入草稿</button>
                 </span>
               </label>
               <label>价格
@@ -92,7 +93,7 @@
               <label class="full">目标店铺
                 <span class="field">
                   <select id="f-shop"></select>
-                  <button type="button" class="ghost" id="toggleShopAdd">添加</button>
+                  <button type="button" class="ghost text-btn" id="toggleShopAdd">添加店铺</button>
                 </span>
               </label>
               <div class="shop-add hidden full" id="shopAddRow">
@@ -142,8 +143,8 @@
             </div>
             <div class="actions">
               <button type="button" class="btn" id="btnPreview">预览</button>
-              <button type="button" class="btn" id="btnDraft">保存草稿</button>
-              <button type="button" class="btn primary" id="btnPublish">发布</button>
+              <button type="button" class="btn primary" id="btnDraft">保存草稿</button>
+              <button type="button" class="btn" id="btnPublish">发布</button>
             </div>
           </div>
         </div>
@@ -152,13 +153,12 @@
       <section class="page" id="page-settings">
         <div class="plain-card">
           <h2>设置</h2>
-          <p class="lede">登录后才能预览和保存草稿。点「登录」会弹出窗口，请在窗口里完成登录。成功后只显示是否已登录，不会展示账号内容。</p>
-          <p class="login-status" id="authStatus">当前未登录</p>
+          <p class="login-status" id="authStatus">未登录</p>
           <div class="row-form">
             <button type="button" class="btn primary" id="loginBtn">登录 Upseller</button>
             <button type="button" class="btn" id="refreshAuthBtn">重新检查</button>
           </div>
-          <p class="fine">预览不会改线上内容。保存草稿不会发布。发布需要再确认一次。</p>
+          <p class="fine" id="authHint">登录后才能预览和保存草稿。</p>
         </div>
       </section>
     </main>

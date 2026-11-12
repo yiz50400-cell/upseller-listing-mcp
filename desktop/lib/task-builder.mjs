@@ -5,12 +5,16 @@
  * current pipeline — it throws if task.video is set.
  */
 
+import { realShops, runBlockReason } from '../renderer/run-guards.mjs';
+
 function clean(value) {
   return String(value ?? '').trim();
 }
 
+export { realShops, runBlockReason };
+
 export function selectedShops(shops, copyToShopCount) {
-  const list = Array.isArray(shops) ? shops.filter((s) => clean(s.id) || clean(s.name)) : [];
+  const list = realShops(shops);
   const n = Math.max(1, Number(copyToShopCount) || 1);
   return { wanted: n, used: list.slice(0, n), available: list.length };
 }
@@ -34,12 +38,13 @@ export function buildImageList(form) {
 }
 
 export function buildListingTasks(form, shops, { publish = false } = {}) {
+  const blocked = runBlockReason({ form, shops, demo: form.demo });
+  if (blocked) throw new Error(blocked);
+
   const productId = clean(form.productId);
   const draftId = clean(form.draftId);
-  if (!productId && !draftId) throw new Error('请填写产品ID或草稿ID');
-
   const shopPick = selectedShops(shops, form.copyToShopCount);
-  if (shopPick.used.length < 1) throw new Error('请先在「店铺」页添加目标店铺，或在表单中指定目标店铺');
+  if (shopPick.used.length < 1) throw new Error('请先添加真实店铺。');
   if (shopPick.used.length < shopPick.wanted) {
     // still proceed with what we have, but surface a warning
   }

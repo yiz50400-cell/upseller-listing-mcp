@@ -4,9 +4,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pathToFileURL } from 'node:url';
 import { resolveEnvPath, toolkitRoot } from './lib/paths.mjs';
-import { readAuthStatus } from './lib/auth-status.mjs';
 import { loadState, saveState } from './lib/task-store.mjs';
-import { loginWithExistingScheme, runFormAction, loadDraft, safeError } from './lib/listing-service.mjs';
+import { loginWithExistingScheme, runFormAction, loadDraft, safeError, verifiedAuth } from './lib/listing-service.mjs';
 import { captureSessionWithElectron } from './lib/electron-login.mjs';
 import { sanitizeForUi } from './lib/sanitize.mjs';
 
@@ -54,11 +53,11 @@ function createWindow() {
   return win;
 }
 
-function snapshot(userDataDir, envPath) {
+async function snapshot(userDataDir, envPath, toolkit) {
   const state = loadState(userDataDir);
   return {
     ...state,
-    auth: readAuthStatus(envPath),
+    auth: await verifiedAuth({ toolkitRoot: toolkit, envPath }),
     meta: {
       packaged,
       productConcurrency: 8,
@@ -81,7 +80,7 @@ app.whenReady().then(() => {
   const { userDataDir, envPath, toolkit } = roots();
   fs.mkdirSync(path.join(userDataDir, 'mcp'), { recursive: true });
 
-  ipcMain.handle('desktop:getState', async () => snapshot(userDataDir, envPath));
+  ipcMain.handle('desktop:getState', async () => snapshot(userDataDir, envPath, toolkit));
 
   ipcMain.handle('desktop:saveState', async (_evt, patch = {}) => {
     const current = loadState(userDataDir);
@@ -94,7 +93,7 @@ app.whenReady().then(() => {
       settings: { ...current.settings, ...(patch.settings || {}) },
     };
     saveState(userDataDir, next);
-    return snapshot(userDataDir, envPath);
+    return snapshot(userDataDir, envPath, toolkit);
   });
 
   const loginSession = session.fromPartition('persist:upseller-login');
@@ -114,9 +113,9 @@ app.whenReady().then(() => {
             startUrl: options.startUrl,
           }),
         });
-        return { ...out, auth: readAuthStatus(envPath) };
+        return { ...out, auth: await verifiedAuth({ toolkitRoot: toolkit, envPath }) };
       } catch (err) {
-        return { ...safeError(err), auth: readAuthStatus(envPath) };
+        return { ...safeError(err), auth: await verifiedAuth({ toolkitRoot: toolkit, envPath }) };
       } finally {
         loginInFlight = null;
       }
@@ -136,7 +135,7 @@ app.whenReady().then(() => {
         confirmPublish: payload.confirmPublish === true,
       });
     } catch (err) {
-      return { ...safeError(err), auth: readAuthStatus(envPath) };
+      return { ...safeError(err), auth: await verifiedAuth({ toolkitRoot: toolkit, envPath }) };
     }
   });
 
@@ -144,7 +143,7 @@ app.whenReady().then(() => {
     try {
       return await loadDraft({ toolkitRoot: toolkit, envPath, draftId });
     } catch (err) {
-      return { ...safeError(err), auth: readAuthStatus(envPath) };
+      return { ...safeError(err), auth: await verifiedAuth({ toolkitRoot: toolkit, envPath }) };
     }
   });
 

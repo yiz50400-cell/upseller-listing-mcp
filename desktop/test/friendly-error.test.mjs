@@ -42,3 +42,12 @@ test('task checkbox helpers toggle, select-all, and clear', () => {
   ids = setAll(ids, visible, false);
   assert.equal(someChecked(ids, visible), false);
 });
+
+test('keeps a clear Chinese reason even when a later stack looks technical', () => {
+  const err = new Error('请填写产品ID或草稿ID\n    at runFormAction (file:///Users/Admin/app/lib/listing-service.mjs:90:11)');
+  assert.equal(friendlyErrorMessage(err), '请填写产品ID。');
+  assert.equal(friendlyErrorMessage(new Error('示意商品不能预览或上架，请先添加真实产品并填写产品ID。')), '示意商品不能预览或上架，请先添加真实产品并填写产品ID。');
+  assert.equal(friendlyErrorMessage(new Error('请先在「店铺」页添加目标店铺后再预览或上架。')), '请先添加真实店铺。');
+  assert.equal(friendlyErrorMessage(new Error('尚未登录。请先在「设置」中登录 Upseller（成功只回长度，不回显凭证）。')), '还没有登录，请先到「设置」里登录。');
+  assert.equal(friendlyErrorMessage(new Error('登录已失效，HTTP 401 at /Users/foo/bar.mjs')), '请重新登录。');
+});

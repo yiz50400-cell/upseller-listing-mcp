@@ -11,6 +11,25 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function readLoginCookies(ses) {
+  const bags = await Promise.all([
+    ses.cookies.get({ domain: 'upseller.com' }).catch(() => []),
+    ses.cookies.get({ url: 'https://app.upseller.com/' }).catch(() => []),
+    ses.cookies.get({ url: 'https://upseller.com/' }).catch(() => []),
+  ]);
+  const seen = new Set();
+  const all = [];
+  for (const bag of bags) {
+    for (const cookie of bag || []) {
+      const key = `${cookie.name}|${cookie.domain}|${cookie.path}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      all.push(cookie);
+    }
+  }
+  return all;
+}
+
 export function clearHeaderListener(ses) {
   try { ses.webRequest.onBeforeSendHeaders(null); } catch {}
 }
@@ -41,9 +60,11 @@ export async function captureSessionWithElectron(options = {}) {
   const toolkitRoot = options.toolkitRoot;
   if (!toolkitRoot) throw new Error('操作没完成，请再试一次。');
 
-  const { extractSession } = await import(
-    pathToFileURL(path.join(toolkitRoot, 'mcp', 'src', 'auth', 'session_env.js')).href
-  );
+  const [{ extractSession, sessionMeetsMinimum }, { probeUpsellerSession }, { createClient }] = await Promise.all([
+    import(pathToFileURL(path.join(toolkitRoot, 'mcp', 'src', 'auth', 'session_env.js')).href),
+    import(pathToFileURL(path.join(toolkitRoot, 'mcp', 'src', 'auth', 'session_probe.js')).href),
+    import(pathToFileURL(path.join(toolkitRoot, 'mcp', 'src', 'client.js')).href),
+  ]);
 
   const headerEvents = [];
   const ses = options.session;
@@ -91,24 +112,31 @@ export async function captureSessionWithElectron(options = {}) {
       if (closedByUser || win.isDestroyed()) {
         throw new Error('登录窗口已关闭');
       }
-      const jar = await ses.cookies.get({ domain: 'upseller.com' }).catch(() => []);
+      const jar = await readLoginCookies(ses);
       try {
         last = extractSession({ headerEvents, cookies: jar });
       } catch {
         last = last.cookie ? last : { cookie: '', deviceId: '' };
       }
-      if (last.cookie.length >= 8 && last.deviceId.length >= 8) {
-        const wait = shownAt + MIN_VISIBLE_MS - Date.now();
-        if (wait > 0) await sleep(wait);
-        if (!win.isDestroyed()) {
-          win.setTitle('登录已完成');
-          await announceLoginSuccess(options.dialog || electronDialog, win);
+      if (sessionMeetsMinimum(last.cookie, last.deviceId)) {
+        const probe = await probeUpsellerSession({
+          cookie: last.cookie,
+          deviceId: last.deviceId,
+          clientFactory: createClient,
+        });
+        if (probe.loggedIn) {
+          const wait = shownAt + MIN_VISIBLE_MS - Date.now();
+          if (wait > 0) await sleep(wait);
+          if (!win.isDestroyed()) {
+            win.setTitle('登录已完成');
+            await announceLoginSuccess(options.dialog || electronDialog, win);
+          }
+          return { cookie: last.cookie, deviceId: last.deviceId, source: 'electron' };
         }
-        return { cookie: last.cookie, deviceId: last.deviceId, source: 'electron' };
       }
       await sleep(1000);
     }
-    if (last.cookie.length >= 8 && last.deviceId.length < 8) {
+    if (String(last.cookie || '').length >= 32 && String(last.deviceId || '').length < 16) {
       throw new Error('已捕获 Cookie，但仍缺少 DeviceId：请在已打开的页面稍作操作（进入店铺/草稿）后重试');
     }
     throw new Error('等待登录超时：请在弹出的浏览器中登录 Upseller 后重试（保持窗口完成登录）');
