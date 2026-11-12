@@ -116,12 +116,15 @@ button { cursor: pointer; }
   flex: 1;
   min-width: 0;
   max-width: 260px;
+  white-space: nowrap;
 }
 .search {
   display: flex; align-items: center; gap: 8px;
   background: #0c0e14; border: 1px solid var(--line-strong);
   border-radius: 8px; padding: 0 10px; color: var(--faint);
+  white-space: nowrap;
 }
+.search span { white-space: nowrap; flex-shrink: 0; }
 .search input { width: 100%; min-width: 0; background: transparent; border: 0; outline: none; height: 32px; font-size: 13px; }
 .table-head, .task-row {
   display: grid;
