@@ -5,7 +5,7 @@
  * current pipeline — it throws if task.video is set.
  */
 
-import { realShops, runBlockReason } from '../renderer/run-guards.mjs';
+import { realShops, runBlockReason, isPlaceholderShopName } from '../renderer/run-guards.mjs';
 
 function clean(value) {
   return String(value ?? '').trim();
@@ -13,10 +13,36 @@ function clean(value) {
 
 export { realShops, runBlockReason };
 
-export function selectedShops(shops, copyToShopCount) {
+export function matchFormShop(shops, form = {}) {
   const list = realShops(shops);
-  const n = Math.max(1, Number(copyToShopCount) || 1);
-  return { wanted: n, used: list.slice(0, n), available: list.length };
+  const id = clean(form.shopId);
+  const name = clean(form.shopName);
+  if (id) {
+    const hit = list.find((shop) => clean(shop.id) === id);
+    if (hit) return hit;
+  }
+  if (name) {
+    const hit = list.find((shop) => clean(shop.name) === name);
+    if (hit) return hit;
+  }
+  if ((id || name) && !isPlaceholderShopName(name)) {
+    return { ...(id ? { id } : {}), ...(name ? { name } : {}) };
+  }
+  return null;
+}
+
+export function selectedShops(shops, copyToShopCount, form = {}) {
+  const list = realShops(shops);
+  const picked = matchFormShop(shops, form);
+  // Editing an existing draft is not "copy to N shops".
+  const n = clean(form.draftId) ? 1 : Math.max(1, Number(copyToShopCount) || 1);
+  if (n === 1) {
+    const used = picked ? [picked] : list.slice(0, 1);
+    return { wanted: 1, used, available: list.length };
+  }
+  const rest = picked ? list.filter((shop) => shop !== picked) : list;
+  const used = (picked ? [picked, ...rest] : list).slice(0, n);
+  return { wanted: n, used, available: list.length };
 }
 
 export function buildImageList(form) {
@@ -43,7 +69,7 @@ export function buildListingTasks(form, shops, { publish = false } = {}) {
 
   const productId = clean(form.productId);
   const draftId = clean(form.draftId);
-  const shopPick = selectedShops(shops, form.copyToShopCount);
+  const shopPick = selectedShops(shops, form.copyToShopCount, form);
   if (shopPick.used.length < 1) throw new Error('请先添加店铺。');
   if (shopPick.used.length < shopPick.wanted) {
     // still proceed with what we have, but surface a warning

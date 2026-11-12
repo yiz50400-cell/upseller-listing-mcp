@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildListingTasks, buildImageList, selectedShops } from '../lib/task-builder.mjs';
+import { buildListingTasks, buildImageList, selectedShops, matchFormShop } from '../lib/task-builder.mjs';
 
 test('requires product or draft id and at least one shop', () => {
   assert.throws(() => buildListingTasks({}, []), /请填写产品ID/);
@@ -62,4 +62,76 @@ test('selectedShops caps at requested count', () => {
   const { wanted, used } = selectedShops([{ name: 'A' }, { name: 'B' }, { name: 'C' }], 2);
   assert.equal(wanted, 2);
   assert.equal(used.length, 2);
+});
+
+test('editing an existing draft builds one task even if copyToShopCount is higher', () => {
+  const shops = [
+    { id: 's-manual', name: '22', source: 'manual' },
+    { id: 's-br', name: 'Tiktok-巴西2店（张佳）', source: 'account' },
+    { id: 's-other', name: '另一家店', source: 'account' },
+  ];
+  const form = {
+    productId: '1492655893399425',
+    draftId: '1492655893399425',
+    title: 'Funda de celular',
+    price: '228',
+    copyToShopCount: 3,
+    shopId: 's-br',
+    shopName: 'Tiktok-巴西2店（张佳）',
+    taskId: 'ui-draft',
+  };
+  const saved = buildListingTasks(form, shops, { publish: false });
+  assert.equal(saved.tasks.length, 1);
+  assert.equal(saved.tasks[0].draftId, '1492655893399425');
+  assert.equal(saved.tasks[0].targetShopId, 's-br');
+  assert.equal(saved.tasks[0].targetShopName, 'Tiktok-巴西2店（张佳）');
+  assert.equal(saved.tasks[0].productPrice, 228);
+  const published = buildListingTasks(form, shops, { publish: true });
+  assert.equal(published.tasks.length, 1);
+  assert.equal(published.tasks[0].draftId, '1492655893399425');
+  assert.equal(published.tasks[0].targetShopId, 's-br');
+  const draftIds = published.tasks.map((t) => t.draftId);
+  assert.equal(new Set(draftIds).size, draftIds.length);
+});
+
+test('dropdown shop is used instead of the first shops in the list', () => {
+  const shops = [
+    { id: 's-manual', name: '22', source: 'manual' },
+    { id: 's-br', name: 'Tiktok-巴西2店（张佳）', source: 'account' },
+  ];
+  const form = {
+    productId: 'P-200',
+    copyToShopCount: 1,
+    shopId: 's-br',
+    shopName: 'Tiktok-巴西2店（张佳）',
+  };
+  const { used } = selectedShops(shops, form.copyToShopCount, form);
+  assert.equal(used.length, 1);
+  assert.equal(used[0].id, 's-br');
+  const out = buildListingTasks(form, shops, { publish: false });
+  assert.equal(out.tasks.length, 1);
+  assert.equal(out.tasks[0].targetShopId, 's-br');
+  assert.notEqual(out.tasks[0].targetShopName, '22');
+});
+
+test('copying a product to several shops starts with the dropdown shop and does not reuse a draftId', () => {
+  const shops = [
+    { id: 's-manual', name: '22', source: 'manual' },
+    { id: 's-a', name: '店铺甲', source: 'account' },
+    { id: 's-b', name: '店铺乙', source: 'account' },
+  ];
+  const form = {
+    productId: 'P-300',
+    copyToShopCount: 2,
+    shopId: 's-b',
+    shopName: '店铺乙',
+  };
+  const out = buildListingTasks(form, shops, { publish: false });
+  assert.equal(out.tasks.length, 2);
+  assert.equal(out.tasks[0].targetShopId, 's-b');
+  assert.equal(out.tasks[1].targetShopId, 's-manual');
+  assert.deepEqual(out.tasks.map((task) => task.targetShopId), ['s-b', 's-manual']);
+  assert.ok(out.tasks.every((task) => !task.draftId));
+  const picked = matchFormShop(shops, form);
+  assert.equal(picked.id, 's-b');
 });

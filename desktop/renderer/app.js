@@ -89,7 +89,11 @@ function currentForm() {
 
 function applyForm(task) {
   $('f-productId').value = task.productId || task.draftId || '';
-  $('f-title').value = task.title || '';
+  const titleInput = $('f-title');
+  titleInput.value = task.title || '';
+  titleInput.scrollLeft = 0;
+  try { titleInput.setSelectionRange(0, 0); } catch { /* not all inputs support this */ }
+  requestAnimationFrame(() => { titleInput.scrollLeft = 0; });
   $('f-price').value = task.price || '';
   $('f-currency').value = task.currency || 'USD';
   $('f-skuPrefix').value = task.skuPrefix || '';
@@ -97,7 +101,9 @@ function applyForm(task) {
   $('f-copyCount').value = task.copyToShopCount || 1;
   formVideo = task.video || '';
   $('f-videoName').value = formVideo ? formVideo.split(/[\\/]/).pop() : '';
-  $('footTitle').textContent = task.title || '未命名任务';
+  const footTitle = task.title || '未命名任务';
+  $('footTitle').textContent = footTitle;
+  $('footTitle').title = task.title || '';
   $('footSub').textContent = task.demo
     ? '示意内容，不会拿去上架'
     : (task.skuPrefix ? `编号 ${task.skuPrefix}` : '先预览，再保存草稿');

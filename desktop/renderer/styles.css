@@ -203,9 +203,15 @@ button { cursor: pointer; }
   margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--line); flex-shrink: 0;
   display: flex; align-items: center; justify-content: space-between; gap: 16px;
 }
+.foot-id { flex: 1; min-width: 0; }
+.foot-title, .foot-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .foot-title { font-size: 14px; }
 .foot-sub { font-size: 11px; color: var(--faint); margin-top: 3px; }
-.actions { display: flex; align-items: flex-end; gap: 10px; }
+.actions { display: flex; align-items: flex-end; gap: 10px; flex-shrink: 0; }
 .btn, .text-btn {
   height: 36px; padding: 0 14px; border-radius: 8px;
   border: 1px solid var(--line-strong); background: #171a22; color: var(--text);
