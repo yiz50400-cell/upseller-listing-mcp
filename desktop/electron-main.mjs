@@ -9,6 +9,7 @@ import { loginWithExistingScheme, runFormAction, loadDraft, listAccountShops, sa
 import { captureSessionWithElectron } from './lib/electron-login.mjs';
 import { sanitizeForUi, friendlyErrorMessage } from './lib/sanitize.mjs';
 import { mergeShops } from './lib/shop-list.mjs';
+import { clearSessionEnv, logoutStatePatch } from './lib/logout.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const packaged = app.isPackaged;
@@ -114,6 +115,29 @@ app.whenReady().then(() => {
   });
 
   const loginSession = session.fromPartition('persist:upseller-login');
+
+  ipcMain.handle('desktop:logout', async () => {
+    try {
+      const cleared = clearSessionEnv(envPath);
+      try {
+        await loginSession.clearStorageData();
+      } catch (err) {
+        console.error(err);
+      }
+      const current = loadState(userDataDir);
+      const patch = logoutStatePatch(current);
+      saveState(userDataDir, { ...current, ...patch });
+      const snap = await snapshot(userDataDir, envPath, toolkit);
+      return {
+        ok: true,
+        cookieLen: cleared.cookieLen,
+        deviceIdLen: cleared.deviceIdLen,
+        ...snap,
+      };
+    } catch (err) {
+      return { ...safeError(err), ...(await snapshot(userDataDir, envPath, toolkit)) };
+    }
+  });
 
   ipcMain.handle('desktop:login', async (_evt, opts = {}) => {
     if (loginInFlight) return loginInFlight;

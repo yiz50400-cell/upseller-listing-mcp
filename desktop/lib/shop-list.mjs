@@ -40,3 +40,22 @@ export function mergeShops(existing, accountRows) {
     }));
   return [...account, ...manual];
 }
+
+/** Keep only manually added shops after logout. Drop account shops from the signed-out account. */
+export function shopsAfterLogout(existing) {
+  return (Array.isArray(existing) ? existing : [])
+    .filter((shop) => {
+      if (!shop || shop.demo) return false;
+      if (shop.source === 'account') return false;
+      const id = clean(shop.id);
+      const name = clean(shop.name);
+      return Boolean(id || name);
+    })
+    .map((shop) => ({
+      id: clean(shop.id),
+      name: clean(shop.name),
+      site: shop.site ? String(shop.site) : '',
+      expired: Boolean(shop.expired),
+      source: 'manual',
+    }));
+}

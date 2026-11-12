@@ -216,8 +216,10 @@ function renderAuth() {
   const loginBtn = $('loginBtn');
   loginBtn.textContent = loggedIn ? '重新登录' : '登录 Upseller';
   loginBtn.classList.toggle('primary', !loggedIn);
+  const logoutBtn = $('logoutBtn');
+  if (logoutBtn) logoutBtn.classList.toggle('hidden', !(loggedIn || auth.present || auth.expired));
   const hint = $('authHint');
-  if (hint) hint.textContent = loggedIn ? '登录失效时，请重新登录。' : '登录后才能预览和保存草稿。';
+  if (hint) hint.textContent = loggedIn ? '换账号请先退出登录。' : '登录后才能预览和保存草稿。';
 }
 
 function escapeHtml(s) {
@@ -439,6 +441,14 @@ $('addShopBtn').addEventListener('click', async () => {
   toast('已添加店铺');
 });
 
+$('logoutBtn').addEventListener('click', async () => {
+  const out = await api.logout();
+  if (out) state = { ...state, ...out };
+  renderAuth();
+  renderShops();
+  if (out?.ok) toast('已退出登录');
+  else toast(out?.error || '退出登录未完成', true);
+});
 $('loginBtn').addEventListener('click', async () => {
   toast('正在打开登录窗口，请在弹出的页面里完成登录');
   const out = await api.login({ timeoutMs: 300000 });
