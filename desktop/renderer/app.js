@@ -4,6 +4,7 @@ import { applyDraftFields, findShopOption } from '../lib/draft-form.mjs';
 import { draftPickerLabel, productPickerLabel, filterListedItems, formatListPrice, pickerThumbHtml } from '../lib/picker-view.mjs';
 import { successActionToast } from '../lib/action-toast.mjs';
 import { bindSourceToTask, markTaskSaved } from '../lib/task-bind.mjs';
+import { statusBadge, statusAfterSuccessfulAction } from '../lib/status-badge.mjs';
 
 const api = window.upsellerDesktop;
 
@@ -128,13 +129,6 @@ function collectShopsForRun() {
     return realShops([{ id: form.shopId, name: form.shopName }]);
   }
   return [];
-}
-
-function statusBadge(task) {
-  if (task.demo) return '<span class="badge demo-status">示例</span>';
-  if (task.status === 'live') return '<span class="badge live"><i></i>已发布</span>';
-  if (task.status === 'wait') return '<span class="badge wait"><i></i>待发布</span>';
-  return '<span class="badge draft"><i></i>草稿</span>';
 }
 
 function fileUrl(file) {
@@ -515,7 +509,7 @@ async function run(mode, confirmPublish = false) {
   }
   toast(successActionToast(mode, { videoIgnored: Boolean(result.videoIgnored) }));
   if (mode === 'save-draft') Object.assign(saved, markTaskSaved(saved, { draftId: result?.draftId || result?.result?.draftId || saved.draftId }));
-  if (mode === 'publish') saved.status = 'wait';
+  if (mode === 'publish') saved.status = statusAfterSuccessfulAction('publish', saved.status);
   await persistTasks(state.tasks);
   renderRows();
   return result;

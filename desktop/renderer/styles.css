@@ -162,7 +162,7 @@ button { cursor: pointer; }
 .badge { display: inline-flex; align-items: center; gap: 6px; }
 .badge i { width: 7px; height: 7px; border-radius: 50%; background: var(--faint); }
 .badge.live i { background: var(--ok); }
-.badge.wait i { background: var(--pending); }
+.badge.wait i, .badge.submitted i { background: var(--pending); }
 .badge.draft i { background: var(--warn); }
 .badge.demo { margin-left: 8px; font-size: 10px; color: var(--faint); border: 1px solid var(--line-strong); border-radius: 999px; padding: 0 6px; }
 
