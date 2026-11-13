@@ -64,3 +64,27 @@ test('listAccountProducts pages each shop with a non-draft state and can filter 
   assert.equal(onlyMx[0].shopId, '1088498');
   assert.deepEqual(seen, ['1088498']);
 });
+
+test('sanitizeProductListItem maps common image fields and keeps a placeholder only when none exist', () => {
+  assert.equal(
+    sanitizeProductListItem({ itemId: '1', itemTitle: 'A', image: { url: 'https://cdn.example.com/obj.jpg' } }).thumbnail,
+    'https://cdn.example.com/obj.jpg',
+  );
+  assert.equal(
+    sanitizeProductListItem({ itemId: '2', itemTitle: 'B', images: ['//cdn.example.com/proto.jpg'] }).thumbnail,
+    'https://cdn.example.com/proto.jpg',
+  );
+  assert.equal(
+    sanitizeProductListItem({ itemId: '3', itemTitle: 'C', cover: 'https://cdn.example.com/cover.jpg' }).thumbnail,
+    'https://cdn.example.com/cover.jpg',
+  );
+  assert.equal(
+    sanitizeProductListItem({ itemId: '4', itemTitle: 'D', pic: 'https://cdn.example.com/pic.jpg' }).thumbnail,
+    'https://cdn.example.com/pic.jpg',
+  );
+  assert.equal(
+    sanitizeProductListItem({ itemId: '5', itemTitle: 'E', mainImage: 'https://cdn.example.com/main.jpg' }).thumbnail,
+    'https://cdn.example.com/main.jpg',
+  );
+  assert.equal(sanitizeProductListItem({ itemId: '6', itemTitle: 'No image' }).thumbnail, '');
+});

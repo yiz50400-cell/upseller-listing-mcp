@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { draftPickerLabel, productPickerLabel, filterListedItems } from '../lib/picker-view.mjs';
+import { draftPickerLabel, productPickerLabel, filterListedItems, firstDisplayImage, pickerThumbHtml } from '../lib/picker-view.mjs';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const html = fs.readFileSync(path.join(rootDir, '../renderer/index.html'), 'utf8');
@@ -77,4 +77,19 @@ test('picker rows show a thumbnail, full title, shop and price, and allow wrappi
   assert.match(css, /\.picker-title[^{]*\{[^}]*white-space:\s*normal/);
   assert.doesNotMatch(css, /#f-draft\s*\{/);
   assert.match(html, /img-src[^"]*https:/);
+});
+
+test('firstDisplayImage uses a real image URL when the list item has one, otherwise stays empty', () => {
+  assert.equal(firstDisplayImage({ thumbnail: 'https://cdn.example.com/a.jpg' }), 'https://cdn.example.com/a.jpg');
+  assert.equal(firstDisplayImage({ imgUrl: 'https://cdn.example.com/a.jpg|https://cdn.example.com/b.jpg' }), 'https://cdn.example.com/a.jpg');
+  assert.equal(firstDisplayImage({ image: { url: 'https://cdn.example.com/obj.jpg' } }), 'https://cdn.example.com/obj.jpg');
+  assert.equal(firstDisplayImage({ images: ['//cdn.example.com/proto.jpg'] }), 'https://cdn.example.com/proto.jpg');
+  assert.equal(firstDisplayImage({ title: 'No photo' }), '');
+});
+
+test('picker thumbnails render an img when a URL exists and the placeholder only when it does not', () => {
+  assert.match(pickerThumbHtml({ thumbnail: 'https://cdn.example.com/a.jpg' }), /<img class="thumb" src="https:\/\/cdn\.example\.com\/a\.jpg"/);
+  assert.match(pickerThumbHtml({ title: 'No photo' }), /<div class="thumb ph">图<\/div>/);
+  assert.doesNotMatch(pickerThumbHtml({ title: 'No photo' }), /<img /);
+  assert.match(app, /pickerThumbHtml|firstDisplayImage/);
 });

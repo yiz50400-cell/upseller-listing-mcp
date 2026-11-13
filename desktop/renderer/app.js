@@ -1,7 +1,8 @@
 import { ensureTaskList, deleteTasks, createProduct, nextSelectedId, visibleTasks as filterTasks } from './task-list.mjs';
 import { realShops, isPlaceholderShopName, runBlockReason } from './run-guards.mjs';
 import { applyDraftFields, findShopOption } from '../lib/draft-form.mjs';
-import { draftPickerLabel, productPickerLabel, filterListedItems, formatListPrice } from '../lib/picker-view.mjs';
+import { draftPickerLabel, productPickerLabel, filterListedItems, formatListPrice, pickerThumbHtml } from '../lib/picker-view.mjs';
+import { successActionToast } from '../lib/action-toast.mjs';
 import { bindSourceToTask, markTaskSaved } from '../lib/task-bind.mjs';
 
 const api = window.upsellerDesktop;
@@ -287,9 +288,7 @@ function renderPickerModal() {
   body.innerHTML = rows.map((row) => {
     const id = pickerMode === 'draft' ? row.draftId : row.productId;
     const selected = selectedKey && String(id) === selectedKey ? 'is-selected' : '';
-    const thumb = row.thumbnail
-      ? `<img class="thumb" src="${escapeAttr(row.thumbnail)}" alt="" />`
-      : `<div class="thumb ph">图</div>`;
+    const thumb = pickerThumbHtml(row);
     const title = row.title || (pickerMode === 'draft' ? '未命名草稿' : '未命名商品');
     const shop = row.shopName || row.shopId || '未指定';
     return `<div class="picker-row ${selected}" data-id="${escapeAttr(id)}" data-kind="${pickerMode}">
@@ -514,8 +513,7 @@ async function run(mode, confirmPublish = false) {
     toast(msg.startsWith(label) ? msg : `${label}：${msg}`, true);
     return result;
   }
-  const prefix = mode === 'preview' ? '预览完成，没有写入草稿，也没有发布' : mode === 'save-draft' ? '已请求保存草稿，不会发布' : '已提交发布请求。试用版不宣称已在真机刊登通过';
-  toast(result.videoIgnored ? `${prefix}。所选视频只会留在本机，这一版还不能把视频发出去。` : prefix);
+  toast(successActionToast(mode, { videoIgnored: Boolean(result.videoIgnored) }));
   if (mode === 'save-draft') Object.assign(saved, markTaskSaved(saved, { draftId: result?.draftId || result?.result?.draftId || saved.draftId }));
   if (mode === 'publish') saved.status = 'wait';
   await persistTasks(state.tasks);

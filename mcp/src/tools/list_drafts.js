@@ -1,4 +1,5 @@
 import { assertApiOk } from '../client.js';
+import { firstDisplayImageUrl } from './list_image.js';
 
 export function sanitizeDraftListItem(row = {}, shop = {}) {
   const draftId = String(row.idStr ?? row.id ?? '').trim();
@@ -13,6 +14,7 @@ export function sanitizeDraftListItem(row = {}, shop = {}) {
     state: row.state ? String(row.state) : 'draft',
     updateTime: row.updateTime ?? null,
     itemId: row.itemId == null || row.itemId === '' ? null : String(row.itemId),
+    thumbnail: firstDisplayImageUrl(row),
   };
 }
 

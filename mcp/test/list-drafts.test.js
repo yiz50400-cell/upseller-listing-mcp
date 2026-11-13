@@ -14,6 +14,7 @@ test('sanitizeDraftListItem keeps only safe display fields and a stable draftId'
     currency: 'MXN',
     state: 'draft',
     updateTime: '2026-11-12 18:08:00',
+    imgUrl: 'https://cdn.example.com/draft-a.jpg|https://cdn.example.com/draft-b.jpg',
     cookie: 'SECRET',
     description: '<p>huge html should not be listed</p>',
   }, { id: '1088498', name: '墨西哥-14', site: 'MX' });
@@ -25,8 +26,10 @@ test('sanitizeDraftListItem keeps only safe display fields and a stable draftId'
   assert.equal(item.price, 228);
   assert.equal(item.currency, 'MXN');
   assert.equal(item.state, 'draft');
+  assert.equal(item.thumbnail, 'https://cdn.example.com/draft-a.jpg');
   assert.equal(item.cookie, undefined);
   assert.equal(item.description, undefined);
+  assert.equal(item.imgUrl, undefined);
 });
 
 test('listAccountDrafts pages each shop and can filter to one shop', async () => {
@@ -56,4 +59,24 @@ test('listAccountDrafts pages each shop and can filter to one shop', async () =>
   assert.equal(onlyMx.length, 1);
   assert.equal(onlyMx[0].shopId, '1088498');
   assert.deepEqual(seen, ['1088498']);
+});
+
+test('sanitizeDraftListItem maps common image fields and keeps a placeholder only when none exist', () => {
+  assert.equal(
+    sanitizeDraftListItem({ idStr: '1', itemTitle: 'A', image: { url: 'https://cdn.example.com/obj.jpg' } }).thumbnail,
+    'https://cdn.example.com/obj.jpg',
+  );
+  assert.equal(
+    sanitizeDraftListItem({ idStr: '2', itemTitle: 'B', images: ['//cdn.example.com/proto.jpg'] }).thumbnail,
+    'https://cdn.example.com/proto.jpg',
+  );
+  assert.equal(
+    sanitizeDraftListItem({ idStr: '3', itemTitle: 'C', cover: 'https://cdn.example.com/cover.jpg' }).thumbnail,
+    'https://cdn.example.com/cover.jpg',
+  );
+  assert.equal(
+    sanitizeDraftListItem({ idStr: '4', itemTitle: 'D', pic: 'https://cdn.example.com/pic.jpg' }).thumbnail,
+    'https://cdn.example.com/pic.jpg',
+  );
+  assert.equal(sanitizeDraftListItem({ idStr: '5', itemTitle: 'No image' }).thumbnail, '');
 });

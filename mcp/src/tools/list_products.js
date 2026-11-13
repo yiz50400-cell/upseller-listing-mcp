@@ -1,14 +1,5 @@
 import { assertApiOk } from '../client.js';
-
-function firstHttpUrl(value) {
-  if (value == null || value === '') return '';
-  const parts = Array.isArray(value) ? value : String(value).split(/[|,]/);
-  for (const part of parts) {
-    const url = String(part || '').trim();
-    if (/^https?:\/\//i.test(url)) return url;
-  }
-  return '';
-}
+import { firstDisplayImageUrl } from './list_image.js';
 
 export function sanitizeProductListItem(row = {}, shop = {}) {
   const productId = String(row.itemId ?? row.productId ?? '').trim();
@@ -23,7 +14,7 @@ export function sanitizeProductListItem(row = {}, shop = {}) {
     currency: row.currency ? String(row.currency) : '',
     state: row.state ? String(row.state) : 'online',
     updateTime: row.updateTime ?? null,
-    thumbnail: firstHttpUrl(row.mainImage || row.imageUrl || row.picUrl || row.imgUrl),
+    thumbnail: firstDisplayImageUrl(row),
     ...(skuCount == null || skuCount === '' ? {} : { skuCount: Number(skuCount) || skuCount }),
   };
 }
