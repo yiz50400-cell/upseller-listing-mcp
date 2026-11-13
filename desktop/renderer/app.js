@@ -1,6 +1,7 @@
 import { ensureTaskList, deleteTasks, createProduct, nextSelectedId, visibleTasks as filterTasks } from './task-list.mjs';
 import { realShops, isPlaceholderShopName, runBlockReason } from './run-guards.mjs';
 import { applyDraftFields, findShopOption } from '../lib/draft-form.mjs';
+import { filterDrafts, draftOptionLabel } from '../lib/draft-list.mjs';
 
 const api = window.upsellerDesktop;
 
@@ -111,6 +112,10 @@ function applyForm(task) {
   const shopSel = $('f-shop');
   const match = findShopOption([...shopSel.options], task);
   if (match) shopSel.value = match.value;
+  const draftSel = $('f-draft');
+  if (draftSel && task.draftId && [...draftSel.options].some((option) => option.value === String(task.draftId))) {
+    draftSel.value = String(task.draftId);
+  }
   renderThumbs();
 }
 
@@ -187,12 +192,6 @@ function renderShops() {
   const select = $('f-shop');
   const previousId = select.selectedOptions[0]?.dataset.id || '';
   const previousName = select.selectedOptions[0]?.dataset.name || '';
-  const hint = $('shopHint');
-  if (hint) {
-    hint.textContent = state.shopsError
-      ? state.shopsError
-      : '登录后会自动列出账号里的店，请从列表里点选。手填名称或编号只是备用办法。';
-  }
   if (!list.length) {
     const empty = state.auth?.loggedIn ? '还没有店铺。登录后仍列不出店时，请点「刷新店铺」。' : '还没有店铺。登录后会自动列出账号里的店。';
     select.innerHTML = `<option value="" disabled selected>${empty}</option>`;
@@ -232,6 +231,74 @@ function escapeHtml(s) {
 }
 function escapeAttr(s) { return escapeHtml(s); }
 
+function renderDrafts() {
+  const select = $('f-draft');
+  const shopFilter = $('f-draftShop');
+  if (!select || !shopFilter) return;
+  const shops = (state.shops || []).filter((shop) => shop && (shop.id || shop.name) && !shop.demo);
+  const previousShop = shopFilter.value;
+  shopFilter.innerHTML = '<option value="">全部店铺</option>' + shops.map((shop) =>
+    `<option value="${escapeAttr(shop.id || '')}">${escapeHtml(shop.name || shop.id || '')}</option>`
+  ).join('');
+  if ([...shopFilter.options].some((option) => option.value === previousShop)) shopFilter.value = previousShop;
+
+  const rows = filterDrafts(state.drafts || [], shopFilter.value);
+  const task = state.tasks.find((item) => item.id === selectedId) || {};
+  const currentId = String(task.draftId || select.value || '');
+  if (!state.auth?.loggedIn) {
+    select.innerHTML = '<option value="">登录后显示草稿</option>';
+    return;
+  }
+  if (!rows.length) {
+    select.innerHTML = `<option value="">${state.draftsError ? escapeHtml(state.draftsError) : '还没有草稿'}</option>`;
+    return;
+  }
+  select.innerHTML = '<option value="">选择草稿</option>' + rows.map((row) =>
+    `<option value="${escapeAttr(row.draftId)}">${escapeHtml(draftOptionLabel(row))}</option>`
+  ).join('');
+  if (currentId && [...select.options].some((option) => option.value === currentId)) select.value = currentId;
+}
+
+async function fetchDrafts({ quiet = true } = {}) {
+  if (!api.listDrafts || !state.auth?.loggedIn) {
+    state.drafts = [];
+    state.draftsError = '';
+    renderDrafts();
+    return;
+  }
+  const out = await api.listDrafts();
+  if (out?.ok) {
+    state.drafts = Array.isArray(out.drafts) ? out.drafts : [];
+    state.draftsError = '';
+  } else {
+    if (!Array.isArray(state.drafts)) state.drafts = [];
+    state.draftsError = out?.error || '没能列出草稿';
+  }
+  renderDrafts();
+  if (state.draftsError && !quiet) toast(state.draftsError, true);
+}
+
+async function loadDraftById(id) {
+  const draftId = String(id || '').trim();
+  if (!draftId) {
+    toast('请选择草稿或输入编号', true);
+    return;
+  }
+  const out = await api.loadDraft(draftId);
+  if (!out.ok) {
+    const msg = out.error || '载入草稿失败';
+    toast(msg.startsWith('载入草稿') ? msg : `载入草稿：${msg}`, true);
+    return;
+  }
+  const task = ensureTask();
+  Object.assign(task, applyDraftFields(task, out.draft, out.draftId));
+  await persistTasks(state.tasks);
+  applyForm(task);
+  renderRows();
+  renderDrafts();
+  toast('已载入草稿');
+}
+
 async function refresh({ refreshShops = true } = {}) {
   state = await api.getState();
   if (refreshShops && state.auth?.loggedIn && api.refreshShops) {
@@ -248,6 +315,7 @@ async function refresh({ refreshShops = true } = {}) {
   renderShops();
   renderRows();
   renderAuth();
+  await fetchDrafts();
   if (selectedId) {
     const task = state.tasks.find((t) => t.id === selectedId);
     if (task) applyForm(task);
@@ -451,6 +519,9 @@ $('logoutBtn').addEventListener('click', async () => {
   if (out) state = { ...state, ...out };
   renderAuth();
   renderShops();
+  state.drafts = [];
+  state.draftsError = '';
+  renderDrafts();
   if (out?.ok) toast('已退出登录');
   else toast(out?.error || '退出登录未完成', true);
 });
@@ -462,8 +533,10 @@ $('loginBtn').addEventListener('click', async () => {
   if (out.shopsError) state.shopsError = out.shopsError;
   renderAuth();
   renderShops();
-  if (out.ok) toast(Array.isArray(out.shops) && out.shops.length ? '登录成功，已列出账号里的店铺' : '登录成功');
-  else toast(out.error || '登录未完成', true);
+  if (out.ok) {
+    await fetchDrafts();
+    toast(Array.isArray(out.shops) && out.shops.length ? '登录成功，已列出账号里的店铺' : '登录成功');
+  } else toast(out.error || '登录未完成', true);
 });
 $('refreshAuthBtn').addEventListener('click', () => refresh({ refreshShops: true }));
 $('refreshShopsBtn').addEventListener('click', async () => {
@@ -475,19 +548,19 @@ $('refreshShopsBtn').addEventListener('click', async () => {
   else toast(realShops(state.shops).length ? '已更新账号里的店铺' : '账号里还没有可用的店铺');
 });
 $('loadDraftBtn').addEventListener('click', async () => {
-  const id = $('f-productId').value.trim();
-  if (!id) return toast('请填写正确的草稿编号。这是 Upseller 里已有草稿的编号，不是随便填一个产品数字。', true);
-  const out = await api.loadDraft(id);
-  if (!out.ok) {
-    const msg = out.error || '载入草稿失败';
-    return toast(msg.startsWith('载入草稿') ? msg : `载入草稿：${msg}`, true);
-  }
-  const task = ensureTask();
-  Object.assign(task, applyDraftFields(task, out.draft, out.draftId));
-  await persistTasks(state.tasks);
-  applyForm(task);
-  renderRows();
-  toast('已载入草稿');
+  await loadDraftById($('f-productId').value);
+});
+$('f-draft').addEventListener('change', async () => {
+  const id = $('f-draft').value;
+  if (id) await loadDraftById(id);
+});
+$('f-draftShop').addEventListener('change', () => {
+  renderDrafts();
+});
+$('refreshDraftsBtn').addEventListener('click', async () => {
+  if (!state.auth?.loggedIn) return toast('请先到「设置」里登录', true);
+  await fetchDrafts({ quiet: false });
+  if (!state.draftsError) toast((state.drafts || []).length ? '已更新草稿' : '还没有草稿');
 });
 
 refresh().then(() => {

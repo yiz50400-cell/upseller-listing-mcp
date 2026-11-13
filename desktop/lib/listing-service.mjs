@@ -6,7 +6,7 @@ import { sanitizeForUi, safeError } from './sanitize.mjs';
 
 async function loadTools(toolkitRoot) {
   const src = path.join(toolkitRoot, 'mcp', 'src');
-  const [{ createClient }, { upsellerLogin }, { upsellerRunListing }, { upsellerRunBatch }, { upsellerGetDraft }, { probeUpsellerSession }, { listShops }] =
+  const [{ createClient }, { upsellerLogin }, { upsellerRunListing }, { upsellerRunBatch }, { upsellerGetDraft }, { probeUpsellerSession }, { listShops }, { listAccountDrafts: listDrafts }] =
     await Promise.all([
       import(pathToFileURL(path.join(src, 'client.js')).href),
       import(pathToFileURL(path.join(src, 'tools/login.js')).href),
@@ -15,8 +15,9 @@ async function loadTools(toolkitRoot) {
       import(pathToFileURL(path.join(src, 'tools/get_draft.js')).href),
       import(pathToFileURL(path.join(src, 'auth/session_probe.js')).href),
       import(pathToFileURL(path.join(src, 'task_resolver.js')).href),
+      import(pathToFileURL(path.join(src, 'tools/list_drafts.js')).href),
     ]);
-  return { createClient, upsellerLogin, upsellerRunListing, upsellerRunBatch, upsellerGetDraft, probeUpsellerSession, listShops };
+  return { createClient, upsellerLogin, upsellerRunListing, upsellerRunBatch, upsellerGetDraft, probeUpsellerSession, listShops, listDrafts };
 }
 
 /** Live auth check. Returns lengths and booleans only — never Cookie or DeviceId values. */
@@ -107,8 +108,7 @@ export async function runFormAction({ toolkitRoot, envPath, form, shops, mode, c
     result = await upsellerRunBatch(client, { tasks: built.tasks, ...options });
   }
 
-  return sanitizeForUi({
-    ok: result?.ok !== false,
+  return wrapFormActionResult(result, {
     mode,
     dryRun,
     published: publish && options.confirmPublish ? Boolean(result?.published) : false,
@@ -116,6 +116,17 @@ export async function runFormAction({ toolkitRoot, envPath, form, shops, mode, c
     warnings: built.warnings,
     videoIgnored: built.videoIgnored,
     auth: client.authMeta?.() || auth,
+  });
+}
+
+export function wrapFormActionResult(result, extras = {}) {
+  const nested = result?.result && typeof result.result === 'object' ? result.result : undefined;
+  const error = result?.error || nested?.error;
+  const ok = result?.ok !== false;
+  return sanitizeForUi({
+    ok,
+    ...(ok || error == null ? {} : { error: String(error) }),
+    ...extras,
     result,
   });
 }
@@ -133,6 +144,27 @@ export async function listAccountShops({ toolkitRoot, envPath }) {
     source: 'account',
   })).filter((shop) => shop.id || shop.name);
   return sanitizeForUi({ ok: true, shops });
+}
+
+export async function listAccountDrafts({ toolkitRoot, envPath, shopId } = {}) {
+  applySessionEnv(envPath);
+  const auth = await verifiedAuth({ toolkitRoot, envPath });
+  if (!auth.loggedIn) {
+    const error = auth.expired || auth.present
+      ? '请重新登录。'
+      : '请先到「设置」里登录。';
+    return { ok: false, error, auth, drafts: [] };
+  }
+  const { createClient, listShops, listDrafts } = await loadTools(toolkitRoot);
+  const client = clientOrThrow(createClient);
+  const shops = await listShops(client);
+  const drafts = await listDrafts(client, { shops, shopId });
+  return sanitizeForUi({
+    ok: true,
+    drafts,
+    shopId: shopId == null || String(shopId).trim() === '' ? '' : String(shopId).trim(),
+    auth: client.authMeta?.() || auth,
+  });
 }
 
 export async function loadDraft({ toolkitRoot, envPath, draftId }) {

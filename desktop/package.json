@@ -1,6 +1,6 @@
 {
   "name": "upseller-listing-desktop",
-  "version": "0.3.8-trial",
+  "version": "0.3.9-trial",
   "private": true,
   "description": "UpSeller auto-listing desktop trial (Style B). Reuses upseller-listing-mcp. Customers do not need Cursor or Codex.",
   "type": "module",

@@ -8,6 +8,8 @@ import { upsellerUploadMedia } from '../tools/upload_media.js';
 import { buildSaveFormFields } from '../form.js';
 import { hash,openStore,mapLimit } from './storage.js';
 import { inspectAssets,preparePayload,verifyPayload } from './payload.js';
+import { listingFingerprint,decideListingResume } from './resume.js';
+import { listDraftsForShop } from '../tools/list_drafts.js';
 
 export async function runListing(client,task,options={}){
  const started=performance.now(),dryRun=options.dryRun!==false,publish=task.publish===true;
@@ -39,12 +41,15 @@ export async function runListing(client,task,options={}){
   const root=path.resolve(options.dataDir||path.join(os.homedir(),'.upseller-client'));
   const account=first.puid!=null?'puid:'+String(first.puid):options.accountKey||client.accountKey?.();
   if(!account)throw new Error('缺少账号隔离标识，拒绝共享任务缓存');
-  const fingerprint=hash(JSON.stringify({...task,images:files.map(f=>({hash:f.hash,role:f.role,skuName:f.skuName})),sourceFile:undefined}));
+  const fingerprint=listingFingerprint(task,files,hash);
   store=openStore(root,account,task.taskId);state=store.load();
-  if(state&&state.fingerprint!==fingerprint)throw new Error('任务 ID 已用于不同内容；如需新建商品请使用新的任务 ID');
+  const decision=decideListingResume({state,fingerprint,task,platform:first});
+  if(decision.type==='mismatch')throw new Error('任务 ID 已用于不同内容；如需新建商品请使用新的任务 ID');
   if(!state){state={taskId:task.taskId,fingerprint,createdAt:new Date().toISOString(),uploads:{},draftId:task.draftId?String(task.draftId):null};save();}
-  if(state.submission?.stage==='verified'&&(state.completedResult||state.lastResult)?.ok){return finish({...state.completedResult||state.lastResult,ok:true,stage:'already-completed',reused:true,verifiedAt:state.verifiedAt,verificationScope:'previous verified receipt; no new remote write'});}
-  if(state.submission?.stage==='intent'||state.submission?.stage==='accepted'||state.submission?.stage==='verified'){
+  else if(decision.updateFingerprint){state.fingerprint=fingerprint;save();}
+  if(decision.type==='already-completed'){return finish({...state.completedResult||state.lastResult,ok:true,stage:'already-completed',reused:true,verifiedAt:state.verifiedAt,verificationScope:'previous verified receipt; no new remote write'});}
+  if(!decision.skipSubmissionShortCircuit&&state.submission?.stage==='verified'&&(state.completedResult||state.lastResult)?.ok){return finish({...state.completedResult||state.lastResult,ok:true,stage:'already-completed',reused:true,verifiedAt:state.verifiedAt,verificationScope:'previous verified receipt; no new remote write'});}
+  if(state.submission?.stage==='intent'||state.submission?.stage==='accepted'||(!decision.skipSubmissionShortCircuit&&state.submission?.stage==='verified')){
    event('reconciling');const current=task.draftId&&String(first.id)===state.draftId?first:await read(state.draftId);const v=verifyPayload(current,state.expected,publish);
    if(v.ok){state.submission.stage='verified';save();return finish({ok:true,stage:'verified',reused:true,itemId:v.itemId,platformStatus:v.platformStatus,verification:v});}
    if(current.errMsg||current.state==='fail')return finish({ok:false,stage:'platform-failed',verification:v,error:String(current.errMsg||'平台处理失败')});
@@ -63,7 +68,7 @@ export async function runListing(client,task,options={}){
     const up=options.coordinator?await options.coordinator.upload(account+'|'+file.hash,upload,signal):await upload();if(!up.fileUrl)throw new Error('上传未返回图片地址');
     const receipt={fileUrl:up.fileUrl,fileKey:up.fileKey,size:up.size,uploadedAt:new Date().toISOString()};state.uploads[file.hash]=receipt;store.cachePut(file.hash,receipt);save();
    });timings.uploadMs=Math.round(performance.now()-begin);}
-  async function listDrafts(){const all=[];for(let pageNum=1;pageNum<=100;pageNum++){signal.throwIfAborted();const j=assertApiOk(await api.postForm('/api/tiktok/product/index',{state:'draft',shopIds:task.targetShopId,pageNum,pageSize:100}),'draft-list');if(!Array.isArray(j.data?.list))throw new Error('草稿列表格式已变化');all.push(...j.data.list);if(all.length>=Number(j.data.total)||j.data.list.length<100)return all;}throw new Error('草稿超过查询安全范围，需精确指定 draftId');}
+  async function listDrafts(){return listDraftsForShop(api,task.targetShopId,{signal});}
   async function obtainDraft(){const begin=performance.now();if(state.draftId){const d=task.draftId?first:await read(state.draftId);if(d.state!=='draft')throw new Error('目标不再是草稿，停止覆盖');timings.copyMs=Math.round(performance.now()-begin);return d;}
    const releaseCopy=await options.coordinator?.acquireCopy(account+'|'+String(first.id)+'|'+String(task.targetShopId),signal);let copyLock;
    try{

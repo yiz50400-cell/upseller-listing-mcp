@@ -306,3 +306,6 @@ input[type="checkbox"] { accent-color: var(--accent); }
   font-weight: 400;
   white-space: normal;
 }
+
+#f-draft { flex: 1; min-width: 0; }
+#f-draftShop { width: 148px; flex-shrink: 0; }

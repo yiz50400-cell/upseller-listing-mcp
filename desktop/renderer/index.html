@@ -69,12 +69,22 @@
         <div class="editor-card">
           <div class="editor-grid">
             <div class="editor-fields">
+              <label class="full">草稿
+                <span class="field">
+                  <select id="f-draft">
+                    <option value="">登录后显示草稿</option>
+                  </select>
+                  <select id="f-draftShop" aria-label="按店铺筛选草稿">
+                    <option value="">全部店铺</option>
+                  </select>
+                  <button type="button" class="ghost text-btn" id="refreshDraftsBtn">刷新</button>
+                </span>
+              </label>
               <label>产品ID
                 <span class="field">
-                  <input id="f-productId" type="text" placeholder="产品编号。载入草稿请填草稿编号" />
-                  <button type="button" class="ghost text-btn" id="loadDraftBtn" title="从 Upseller 拉取已有草稿，需要那边的草稿编号">载入草稿</button>
+                  <input id="f-productId" type="text" placeholder="产品编号或草稿编号" />
+                  <button type="button" class="ghost text-btn" id="loadDraftBtn" title="按编号载入">载入</button>
                 </span>
-                <span class="field-hint">「载入草稿」会拉取 Upseller 里已有的草稿，请填写那边的草稿编号，不要随便填一个产品数字。</span>
               </label>
               <label>价格
                 <span class="field price-field">
@@ -96,7 +106,6 @@
                   <button type="button" class="ghost text-btn" id="refreshShopsBtn">刷新店铺</button>
                   <button type="button" class="ghost text-btn" id="toggleShopAdd">手动添加</button>
                 </span>
-                <span class="field-hint" id="shopHint">登录后会自动列出账号里的店，请从列表里点选。手填名称或编号只是备用办法。</span>
               </label>
               <div class="shop-add hidden full" id="shopAddRow">
                 <input id="shopName" type="text" placeholder="店铺名称" />
@@ -114,7 +123,7 @@
               </label>
               <label class="full">视频
                 <span class="field">
-                  <input id="f-videoName" type="text" readonly placeholder="选填。这一版还不能传视频，填了也不会发出去。" />
+                  <input id="f-videoName" type="text" readonly placeholder="选填" />
                   <button type="button" class="ghost" id="pickVideoBtn">选择视频</button>
                   <button type="button" class="ghost" id="clearVideoBtn">清除</button>
                 </span>
