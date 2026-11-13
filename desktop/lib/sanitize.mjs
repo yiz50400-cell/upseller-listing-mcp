@@ -22,6 +22,14 @@ export function sanitizeForUi(value, depth = 0) {
   return value;
 }
 
+export function publicActionError(message) {
+  const text = String(message == null ? '' : message);
+  if (/任务 ID 已用于不同内容/.test(text)) {
+    return '所选商品与已保存的内容不同。请再选一次后再保存或发布。';
+  }
+  return text;
+}
+
 export function safeError(err) {
   return {
     ok: false,
@@ -76,6 +84,9 @@ export function friendlyErrorMessage(err) {
   }
   if (/发布必须二次确认/i.test(blob)) {
     return '发布需要再确认一次。';
+  }
+  if (/任务 ID 已用于不同内容/.test(blob)) {
+    return publicActionError(blob);
   }
   const cleaned = blob.replace(/^Error:\s*/i, '');
   const first = cleaned.split(/[\n\r]/)[0].trim();

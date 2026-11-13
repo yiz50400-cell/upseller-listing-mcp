@@ -10,7 +10,9 @@ test('a failed action exposes the human-readable reason on result.error', () => 
   }, { mode: 'publish' });
   assert.equal(out.ok, false);
   assert.equal(out.mode, 'publish');
-  assert.equal(out.error, '任务 ID 已用于不同内容；如需新建商品请使用新的任务 ID');
+  assert.ok(out.error);
+  assert.doesNotMatch(out.error, /任务 ID/);
+  assert.match(out.error, /已保存|再选|不同/);
 });
 
 test('a nested result.error is lifted to the top-level error field', () => {

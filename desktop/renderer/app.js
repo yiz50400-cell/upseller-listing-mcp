@@ -1,7 +1,8 @@
 import { ensureTaskList, deleteTasks, createProduct, nextSelectedId, visibleTasks as filterTasks } from './task-list.mjs';
 import { realShops, isPlaceholderShopName, runBlockReason } from './run-guards.mjs';
 import { applyDraftFields, findShopOption } from '../lib/draft-form.mjs';
-import { filterDrafts, draftOptionLabel } from '../lib/draft-list.mjs';
+import { draftPickerLabel, productPickerLabel, filterListedItems, formatListPrice } from '../lib/picker-view.mjs';
+import { bindSourceToTask, markTaskSaved } from '../lib/task-bind.mjs';
 
 const api = window.upsellerDesktop;
 
@@ -38,6 +39,7 @@ function demo(id, title, sku, shopName, site, price, currency, status, age) {
 let state = { tasks: [], shops: [], materials: { images: [], videos: [] }, auth: {}, meta: {} };
 let selectedId = null;
 let formVideo = '';
+let pickerMode = 'draft';
 const checkedIds = new Set();
 
 function $(id) { return document.getElementById(id); }
@@ -72,7 +74,7 @@ function currentForm() {
   return {
     taskId: selectedId || `ui-${Date.now().toString(36)}`,
     productId: $('f-productId').value.trim(),
-    draftId: task.draftId || '',
+    draftId: task.draftId || ($('f-draftIdManual') ? $('f-draftIdManual').value.trim() : ''),
     title: $('f-title').value.trim(),
     price: $('f-price').value,
     currency: $('f-currency').value,
@@ -90,7 +92,8 @@ function currentForm() {
 }
 
 function applyForm(task) {
-  $('f-productId').value = task.productId || task.draftId || '';
+  if ($('f-draftIdManual')) $('f-draftIdManual').value = task.draftId || '';
+  $('f-productId').value = task.productId || '';
   const titleInput = $('f-title');
   titleInput.value = task.title || '';
   titleInput.scrollLeft = 0;
@@ -112,10 +115,7 @@ function applyForm(task) {
   const shopSel = $('f-shop');
   const match = findShopOption([...shopSel.options], task);
   if (match) shopSel.value = match.value;
-  const draftSel = $('f-draft');
-  if (draftSel && task.draftId && [...draftSel.options].some((option) => option.value === String(task.draftId))) {
-    draftSel.value = String(task.draftId);
-  }
+  renderPickerTriggers();
   renderThumbs();
 }
 
@@ -231,39 +231,81 @@ function escapeHtml(s) {
 }
 function escapeAttr(s) { return escapeHtml(s); }
 
-function renderDrafts() {
-  const select = $('f-draft');
-  const shopFilter = $('f-draftShop');
-  if (!select || !shopFilter) return;
+function renderPickerTriggers() {
+  const task = state.tasks.find((item) => item.id === selectedId) || {};
+  const draftLabel = draftPickerLabel(task);
+  const productLabel = productPickerLabel(task);
+  const draftEl = $('draftPickerLabelText');
+  const productEl = $('productPickerLabelText');
+  if (draftEl) {
+    draftEl.textContent = draftLabel || '从草稿箱选择';
+    draftEl.classList.toggle('is-placeholder', !draftLabel);
+  }
+  if (productEl) {
+    productEl.textContent = productLabel || '复制在线商品';
+    productEl.classList.toggle('is-placeholder', !productLabel);
+  }
+}
+
+function renderPickerShops(select) {
   const shops = (state.shops || []).filter((shop) => shop && (shop.id || shop.name) && !shop.demo);
-  const previousShop = shopFilter.value;
-  shopFilter.innerHTML = '<option value="">全部店铺</option>' + shops.map((shop) =>
+  const previousShop = select.value;
+  select.innerHTML = '<option value="">全部店铺</option>' + shops.map((shop) =>
     `<option value="${escapeAttr(shop.id || '')}">${escapeHtml(shop.name || shop.id || '')}</option>`
   ).join('');
-  if ([...shopFilter.options].some((option) => option.value === previousShop)) shopFilter.value = previousShop;
+  if ([...select.options].some((option) => option.value === previousShop)) select.value = previousShop;
+}
 
-  const rows = filterDrafts(state.drafts || [], shopFilter.value);
+function renderPickerModal() {
+  const body = $('pickerRows');
+  const shopFilter = $('pickerShop');
+  if (!body || !shopFilter) return;
+  renderPickerShops(shopFilter);
+  const query = $('pickerSearch') ? $('pickerSearch').value : '';
+  const all = pickerMode === 'draft' ? (state.drafts || []) : (state.products || []);
+  const error = pickerMode === 'draft' ? state.draftsError : state.productsError;
+  const rows = filterListedItems(all, { shopId: shopFilter.value, query });
   const task = state.tasks.find((item) => item.id === selectedId) || {};
-  const currentId = String(task.draftId || select.value || '');
+  const selectedKey = pickerMode === 'draft'
+    ? String(task.draftId || '')
+    : (task.draftId ? '' : String(task.productId || ''));
   if (!state.auth?.loggedIn) {
-    select.innerHTML = '<option value="">登录后显示草稿</option>';
+    body.innerHTML = `<div class="picker-empty">${pickerMode === 'draft' ? '登录后显示草稿' : '登录后显示在线商品'}</div>`;
+    return;
+  }
+  if (error && !all.length) {
+    body.innerHTML = `<div class="picker-empty">${escapeHtml(error)}</div>`;
     return;
   }
   if (!rows.length) {
-    select.innerHTML = `<option value="">${state.draftsError ? escapeHtml(state.draftsError) : '还没有草稿'}</option>`;
+    const empty = query
+      ? '没有匹配的结果'
+      : (pickerMode === 'draft' ? '还没有草稿' : '还没有在线商品');
+    body.innerHTML = `<div class="picker-empty">${empty}</div>`;
     return;
   }
-  select.innerHTML = '<option value="">选择草稿</option>' + rows.map((row) =>
-    `<option value="${escapeAttr(row.draftId)}">${escapeHtml(draftOptionLabel(row))}</option>`
-  ).join('');
-  if (currentId && [...select.options].some((option) => option.value === currentId)) select.value = currentId;
+  body.innerHTML = rows.map((row) => {
+    const id = pickerMode === 'draft' ? row.draftId : row.productId;
+    const selected = selectedKey && String(id) === selectedKey ? 'is-selected' : '';
+    const thumb = row.thumbnail
+      ? `<img class="thumb" src="${escapeAttr(row.thumbnail)}" alt="" />`
+      : `<div class="thumb ph">图</div>`;
+    const title = row.title || (pickerMode === 'draft' ? '未命名草稿' : '未命名商品');
+    const shop = row.shopName || row.shopId || '未指定';
+    return `<div class="picker-row ${selected}" data-id="${escapeAttr(id)}" data-kind="${pickerMode}">
+      <div class="picker-col-product">${thumb}<div class="picker-title-wrap"><div class="picker-title">${escapeHtml(title)}</div></div></div>
+      <div class="picker-col-shop">${escapeHtml(shop)}${row.site ? `<small>${escapeHtml(row.site)}</small>` : ''}</div>
+      <div class="picker-col-price">${escapeHtml(formatListPrice(row))}</div>
+    </div>`;
+  }).join('');
 }
 
 async function fetchDrafts({ quiet = true } = {}) {
   if (!api.listDrafts || !state.auth?.loggedIn) {
     state.drafts = [];
     state.draftsError = '';
-    renderDrafts();
+    renderPickerTriggers();
+    if (pickerMode === 'draft' && $('pickerModal') && !$('pickerModal').classList.contains('hidden')) renderPickerModal();
     return;
   }
   const out = await api.listDrafts();
@@ -274,11 +316,64 @@ async function fetchDrafts({ quiet = true } = {}) {
     if (!Array.isArray(state.drafts)) state.drafts = [];
     state.draftsError = out?.error || '没能列出草稿';
   }
-  renderDrafts();
+  renderPickerTriggers();
+  if (pickerMode === 'draft' && $('pickerModal') && !$('pickerModal').classList.contains('hidden')) renderPickerModal();
   if (state.draftsError && !quiet) toast(state.draftsError, true);
 }
 
-async function loadDraftById(id) {
+async function fetchProducts({ quiet = true } = {}) {
+  if (!api.listProducts || !state.auth?.loggedIn) {
+    state.products = [];
+    state.productsError = '';
+    renderPickerTriggers();
+    if (pickerMode === 'product' && $('pickerModal') && !$('pickerModal').classList.contains('hidden')) renderPickerModal();
+    return;
+  }
+  const out = await api.listProducts();
+  if (out?.ok) {
+    state.products = Array.isArray(out.products) ? out.products : [];
+    state.productsError = '';
+  } else {
+    if (!Array.isArray(state.products)) state.products = [];
+    state.productsError = out?.error || '没能列出在线商品';
+  }
+  renderPickerTriggers();
+  if (pickerMode === 'product' && $('pickerModal') && !$('pickerModal').classList.contains('hidden')) renderPickerModal();
+  if (state.productsError && !quiet) toast(state.productsError, true);
+}
+
+function closePicker() {
+  const modal = $('pickerModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function openPicker(mode) {
+  pickerMode = mode === 'product' ? 'product' : 'draft';
+  const title = $('pickerTitle');
+  if (title) title.textContent = pickerMode === 'draft' ? '从草稿箱选择' : '复制在线商品';
+  if ($('pickerSearch')) $('pickerSearch').value = '';
+  const modal = $('pickerModal');
+  if (modal) modal.classList.remove('hidden');
+  renderPickerModal();
+  if (pickerMode === 'draft') await fetchDrafts({ quiet: true });
+  else await fetchProducts({ quiet: true });
+}
+
+function replaceBoundTask(current, bound) {
+  if (bound.rotated) {
+    state.tasks = state.tasks.map((task) => (task.id === bound.previousId ? bound.task : task));
+    if (selectedId === bound.previousId) selectedId = bound.task.id;
+    if (checkedIds.has(bound.previousId)) {
+      checkedIds.delete(bound.previousId);
+      checkedIds.add(bound.task.id);
+    }
+    return bound.task;
+  }
+  Object.assign(current, bound.task, { id: current.id });
+  return current;
+}
+
+async function bindDraft(id) {
   const draftId = String(id || '').trim();
   if (!draftId) {
     toast('请选择草稿或输入编号', true);
@@ -290,13 +385,37 @@ async function loadDraftById(id) {
     toast(msg.startsWith('载入草稿') ? msg : `载入草稿：${msg}`, true);
     return;
   }
-  const task = ensureTask();
-  Object.assign(task, applyDraftFields(task, out.draft, out.draftId));
+  const current = ensureTask();
+  const bound = bindSourceToTask(current, { kind: 'draft', draft: out.draft, draftId: out.draftId || draftId });
+  const task = replaceBoundTask(current, bound);
   await persistTasks(state.tasks);
   applyForm(task);
   renderRows();
-  renderDrafts();
-  toast('已载入草稿');
+  toast(bound.rotated ? '已换到新的任务并载入草稿' : '已载入草稿');
+}
+
+async function bindOnlineProduct(id) {
+  const productId = String(id || '').trim();
+  if (!productId) {
+    toast('请选择在线商品', true);
+    return;
+  }
+  const product = (state.products || []).find((row) => String(row.productId) === productId);
+  if (!product) {
+    toast('找不到这个产品。请从列表里重新选择。', true);
+    return;
+  }
+  const current = ensureTask();
+  const bound = bindSourceToTask(current, { kind: 'product', product });
+  const task = replaceBoundTask(current, bound);
+  await persistTasks(state.tasks);
+  applyForm(task);
+  renderRows();
+  toast(bound.rotated ? '已换到新的任务并复制在线商品' : '已复制在线商品');
+}
+
+async function loadDraftById(id) {
+  await bindDraft(id);
 }
 
 async function refresh({ refreshShops = true } = {}) {
@@ -397,7 +516,7 @@ async function run(mode, confirmPublish = false) {
   }
   const prefix = mode === 'preview' ? '预览完成，没有写入草稿，也没有发布' : mode === 'save-draft' ? '已请求保存草稿，不会发布' : '已提交发布请求。试用版不宣称已在真机刊登通过';
   toast(result.videoIgnored ? `${prefix}。所选视频只会留在本机，这一版还不能把视频发出去。` : prefix);
-  if (mode === 'save-draft') saved.status = 'draft';
+  if (mode === 'save-draft') Object.assign(saved, markTaskSaved(saved, { draftId: result?.draftId || result?.result?.draftId || saved.draftId }));
   if (mode === 'publish') saved.status = 'wait';
   await persistTasks(state.tasks);
   renderRows();
@@ -520,8 +639,10 @@ $('logoutBtn').addEventListener('click', async () => {
   renderAuth();
   renderShops();
   state.drafts = [];
+  state.products = [];
   state.draftsError = '';
-  renderDrafts();
+  state.productsError = '';
+  renderPickerTriggers();
   if (out?.ok) toast('已退出登录');
   else toast(out?.error || '退出登录未完成', true);
 });
@@ -548,19 +669,43 @@ $('refreshShopsBtn').addEventListener('click', async () => {
   else toast(realShops(state.shops).length ? '已更新账号里的店铺' : '账号里还没有可用的店铺');
 });
 $('loadDraftBtn').addEventListener('click', async () => {
-  await loadDraftById($('f-productId').value);
+  await loadDraftById($('f-draftIdManual').value);
 });
-$('f-draft').addEventListener('change', async () => {
-  const id = $('f-draft').value;
-  if (id) await loadDraftById(id);
-});
-$('f-draftShop').addEventListener('change', () => {
-  renderDrafts();
-});
+$('openDraftPickerBtn').addEventListener('click', () => openPicker('draft'));
+$('openProductPickerBtn').addEventListener('click', () => openPicker('product'));
 $('refreshDraftsBtn').addEventListener('click', async () => {
   if (!state.auth?.loggedIn) return toast('请先到「设置」里登录', true);
   await fetchDrafts({ quiet: false });
   if (!state.draftsError) toast((state.drafts || []).length ? '已更新草稿' : '还没有草稿');
+});
+$('refreshProductsBtn').addEventListener('click', async () => {
+  if (!state.auth?.loggedIn) return toast('请先到「设置」里登录', true);
+  await fetchProducts({ quiet: false });
+  if (!state.productsError) toast((state.products || []).length ? '已更新在线商品' : '还没有在线商品');
+});
+$('pickerClose').addEventListener('click', closePicker);
+$('pickerModal').addEventListener('click', (e) => {
+  if (e.target === $('pickerModal')) closePicker();
+});
+$('pickerSearch').addEventListener('input', renderPickerModal);
+$('pickerShop').addEventListener('change', renderPickerModal);
+$('pickerRefresh').addEventListener('click', async () => {
+  if (!state.auth?.loggedIn) return toast('请先到「设置」里登录', true);
+  if (pickerMode === 'draft') {
+    await fetchDrafts({ quiet: false });
+    if (!state.draftsError) toast((state.drafts || []).length ? '已更新草稿' : '还没有草稿');
+  } else {
+    await fetchProducts({ quiet: false });
+    if (!state.productsError) toast((state.products || []).length ? '已更新在线商品' : '还没有在线商品');
+  }
+});
+$('pickerRows').addEventListener('click', async (e) => {
+  const row = e.target.closest('.picker-row');
+  if (!row) return;
+  const id = row.dataset.id;
+  if (row.dataset.kind === 'product') await bindOnlineProduct(id);
+  else await bindDraft(id);
+  closePicker();
 });
 
 refresh().then(() => {

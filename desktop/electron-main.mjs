@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { pathToFileURL } from 'node:url';
 import { resolveEnvPath, toolkitRoot } from './lib/paths.mjs';
 import { loadState, saveState } from './lib/task-store.mjs';
-import { loginWithExistingScheme, runFormAction, loadDraft, listAccountShops, listAccountDrafts, safeError, verifiedAuth } from './lib/listing-service.mjs';
+import { loginWithExistingScheme, runFormAction, loadDraft, listAccountShops, listAccountDrafts, listAccountProducts, safeError, verifiedAuth } from './lib/listing-service.mjs';
 import { captureSessionWithElectron } from './lib/electron-login.mjs';
 import { sanitizeForUi, friendlyErrorMessage } from './lib/sanitize.mjs';
 import { mergeShops } from './lib/shop-list.mjs';
@@ -194,6 +194,14 @@ app.whenReady().then(() => {
       return await listAccountDrafts({ toolkitRoot: toolkit, envPath, shopId });
     } catch (err) {
       return { ...safeError(err), drafts: [], auth: await verifiedAuth({ toolkitRoot: toolkit, envPath }) };
+    }
+  });
+
+  ipcMain.handle('desktop:listProducts', async (_evt, shopId) => {
+    try {
+      return await listAccountProducts({ toolkitRoot: toolkit, envPath, shopId });
+    } catch (err) {
+      return { ...safeError(err), products: [], auth: await verifiedAuth({ toolkitRoot: toolkit, envPath }) };
     }
   });
 

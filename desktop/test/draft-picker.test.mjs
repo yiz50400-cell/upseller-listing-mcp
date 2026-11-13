@@ -10,13 +10,14 @@ const html = fs.readFileSync(path.join(root, '../renderer/index.html'), 'utf8');
 const app = fs.readFileSync(path.join(root, '../renderer/app.js'), 'utf8');
 
 test('the form lists drafts as the primary path and keeps a quiet manual id fallback', () => {
-  assert.match(html, /id="f-draft"/);
-  assert.match(html, /id="f-draftShop"/);
+  assert.match(html, /从草稿箱选择/);
+  assert.match(html, /id="openDraftPickerBtn"/);
   assert.match(html, /id="loadDraftBtn"/);
-  assert.match(html, /id="f-productId"/);
+  assert.match(html, /id="f-draftIdManual"/);
   assert.doesNotMatch(html, /field-hint/);
   assert.doesNotMatch(html, /会拉取 Upseller 里已有的草稿，请填写那边的草稿编号/);
   assert.doesNotMatch(html, /登录后会自动列出账号里的店，请从列表里点选。手填名称或编号只是备用办法/);
+  assert.doesNotMatch(html, /产品编号或草稿编号/);
   assert.match(app, /listDrafts/);
   assert.match(app, /applyDraftFields/);
   assert.match(app, /findShopOption/);

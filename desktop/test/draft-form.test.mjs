@@ -59,3 +59,37 @@ test('if a draft only has shopName, stale shopId is cleared so the dropdown foll
   const match = findShopOption(options, task);
   assert.equal(match?.dataset.id, '1088498');
 });
+
+test('an unpublished draft with an empty itemId clears a stale productId', () => {
+  const task = applyDraftFields({
+    shopId: '1088498',
+    shopName: '墨西哥-14',
+    productId: 'OLD-ONLINE-99',
+    draftId: '14926559893399425',
+    title: '旧标题',
+  }, {
+    shopId: '1088498',
+    shopName: '墨西哥-14',
+    itemId: '',
+    itemTitle: 'SADOER Suero Nutritivo para Pestañas – Esencia Cuidado para Pestañas',
+    price: '228',
+    currency: 'MXN',
+    site: 'MX',
+  }, '14926559893399425');
+
+  assert.equal(task.productId, '');
+  assert.equal(task.draftId, '14926559893399425');
+  assert.equal(task.title, 'SADOER Suero Nutritivo para Pestañas – Esencia Cuidado para Pestañas');
+  assert.equal(task.price, '228');
+});
+
+test('an unpublished draft with a null itemId also clears a stale productId', () => {
+  const task = applyDraftFields({
+    productId: 'OLD-ONLINE-99',
+  }, {
+    itemId: null,
+    itemTitle: 'Draft only',
+  }, 'DRAFT-1');
+  assert.equal(task.productId, '');
+  assert.equal(task.draftId, 'DRAFT-1');
+});

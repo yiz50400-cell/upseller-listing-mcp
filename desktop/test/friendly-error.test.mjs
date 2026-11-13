@@ -80,3 +80,9 @@ test('maps draft lookup and shop mismatch into clear Chinese', () => {
   const chineseApi = friendlyErrorMessage(new Error('API code=1 msg=库存不足 path=/api/tiktok/product/add'));
   assert.equal(chineseApi, '库存不足。');
 });
+
+test('a raw task-id mismatch is rewritten so the toast never mentions 任务 ID', () => {
+  const msg = friendlyErrorMessage(new Error('任务 ID 已用于不同内容；如需新建商品请使用新的任务 ID'));
+  assert.doesNotMatch(msg, /任务 ID/);
+  assert.match(msg, /已保存|再选|不同/);
+});

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: blob:; script-src 'self'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: blob: https:; script-src 'self'" />
   <title>自动上架</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -69,21 +69,22 @@
         <div class="editor-card">
           <div class="editor-grid">
             <div class="editor-fields">
-              <label class="full">草稿
+              <label class="full">从草稿箱选择
                 <span class="field">
-                  <select id="f-draft">
-                    <option value="">登录后显示草稿</option>
-                  </select>
-                  <select id="f-draftShop" aria-label="按店铺筛选草稿">
-                    <option value="">全部店铺</option>
-                  </select>
+                  <button type="button" class="picker-trigger" id="openDraftPickerBtn">
+                    <span class="picker-trigger-label" id="draftPickerLabelText">从草稿箱选择</span>
+                    <span class="picker-chevron" aria-hidden="true">▾</span>
+                  </button>
                   <button type="button" class="ghost text-btn" id="refreshDraftsBtn">刷新</button>
                 </span>
               </label>
-              <label>产品ID
+              <label class="full">复制在线商品
                 <span class="field">
-                  <input id="f-productId" type="text" placeholder="产品编号或草稿编号" />
-                  <button type="button" class="ghost text-btn" id="loadDraftBtn" title="按编号载入">载入</button>
+                  <button type="button" class="picker-trigger" id="openProductPickerBtn">
+                    <span class="picker-trigger-label" id="productPickerLabelText">复制在线商品</span>
+                    <span class="picker-chevron" aria-hidden="true">▾</span>
+                  </button>
+                  <button type="button" class="ghost text-btn" id="refreshProductsBtn">刷新</button>
                 </span>
               </label>
               <label>价格
@@ -117,6 +118,15 @@
               </label>
               <label>SKU 前缀
                 <input id="f-skuPrefix" type="text" placeholder="选填" />
+              </label>
+              <label>草稿编号
+                <span class="field">
+                  <input id="f-draftIdManual" type="text" placeholder="草稿编号" />
+                  <button type="button" class="ghost text-btn" id="loadDraftBtn" title="按草稿编号载入">载入</button>
+                </span>
+              </label>
+              <label>产品ID
+                <input id="f-productId" type="text" placeholder="产品编号" />
               </label>
               <label class="full">备注
                 <input id="f-notes" type="text" placeholder="选填，只保存在本机" />
@@ -183,6 +193,33 @@
       <div class="row-form end">
         <button type="button" class="btn" id="cancelPublish">取消</button>
         <button type="button" class="btn danger" id="confirmPublish">我确认要发布</button>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="picker-modal hidden" id="pickerModal">
+    <div class="picker-card" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
+      <div class="picker-head">
+        <h3 id="pickerTitle">从草稿箱选择</h3>
+        <button type="button" class="picker-close" id="pickerClose" aria-label="关闭">×</button>
+      </div>
+      <div class="picker-toolbar">
+        <label class="search">
+          <input id="pickerSearch" type="search" placeholder="搜索标题或编号" aria-label="搜索标题或编号" />
+        </label>
+        <select id="pickerShop" aria-label="按店铺筛选">
+          <option value="">全部店铺</option>
+        </select>
+        <button type="button" class="ghost text-btn" id="pickerRefresh">刷新</button>
+      </div>
+      <div class="picker-table">
+        <div class="picker-table-head">
+          <div class="picker-col-product">产品标题</div>
+          <div class="picker-col-shop">店铺</div>
+          <div class="picker-col-price">价格</div>
+        </div>
+        <div class="picker-table-body" id="pickerRows"></div>
       </div>
     </div>
   </div>

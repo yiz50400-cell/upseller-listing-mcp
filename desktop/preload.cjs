@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('upsellerDesktop', {
   runAction: (payload) => ipcRenderer.invoke('desktop:runAction', payload),
   loadDraft: (draftId) => ipcRenderer.invoke('desktop:loadDraft', draftId),
   listDrafts: (shopId) => ipcRenderer.invoke('desktop:listDrafts', shopId),
+  listProducts: (shopId) => ipcRenderer.invoke('desktop:listProducts', shopId),
   pickFiles: (kind) => ipcRenderer.invoke('desktop:pickFiles', kind),
   windowControl: (action) => ipcRenderer.invoke('desktop:windowControl', action),
 });

@@ -5,7 +5,7 @@ function clean(value) {
 export function applyDraftFields(task, draft, draftId) {
   const next = { ...(task || {}) };
   if (draftId != null && clean(draftId)) next.draftId = clean(draftId);
-  if (draft?.itemId != null && clean(draft.itemId)) next.productId = clean(draft.itemId);
+  if (draft) next.productId = clean(draft.itemId);
   if (draft?.itemTitle) next.title = draft.itemTitle;
   if (draft?.price != null && draft.price !== '') next.price = draft.price;
   if (draft?.currency) next.currency = draft.currency;

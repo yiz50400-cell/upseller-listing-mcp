@@ -2,11 +2,11 @@ import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { applySessionEnv, readAuthStatus, loadSessionEnv } from './auth-status.mjs';
 import { buildListingTasks, realShops } from './task-builder.mjs';
-import { sanitizeForUi, safeError } from './sanitize.mjs';
+import { sanitizeForUi, safeError, publicActionError } from './sanitize.mjs';
 
 async function loadTools(toolkitRoot) {
   const src = path.join(toolkitRoot, 'mcp', 'src');
-  const [{ createClient }, { upsellerLogin }, { upsellerRunListing }, { upsellerRunBatch }, { upsellerGetDraft }, { probeUpsellerSession }, { listShops }, { listAccountDrafts: listDrafts }] =
+  const [{ createClient }, { upsellerLogin }, { upsellerRunListing }, { upsellerRunBatch }, { upsellerGetDraft }, { probeUpsellerSession }, { listShops }, { listAccountDrafts: listDrafts }, { listAccountProducts: listProducts }] =
     await Promise.all([
       import(pathToFileURL(path.join(src, 'client.js')).href),
       import(pathToFileURL(path.join(src, 'tools/login.js')).href),
@@ -16,8 +16,9 @@ async function loadTools(toolkitRoot) {
       import(pathToFileURL(path.join(src, 'auth/session_probe.js')).href),
       import(pathToFileURL(path.join(src, 'task_resolver.js')).href),
       import(pathToFileURL(path.join(src, 'tools/list_drafts.js')).href),
+      import(pathToFileURL(path.join(src, 'tools/list_products.js')).href),
     ]);
-  return { createClient, upsellerLogin, upsellerRunListing, upsellerRunBatch, upsellerGetDraft, probeUpsellerSession, listShops, listDrafts };
+  return { createClient, upsellerLogin, upsellerRunListing, upsellerRunBatch, upsellerGetDraft, probeUpsellerSession, listShops, listDrafts, listProducts };
 }
 
 /** Live auth check. Returns lengths and booleans only — never Cookie or DeviceId values. */
@@ -125,7 +126,7 @@ export function wrapFormActionResult(result, extras = {}) {
   const ok = result?.ok !== false;
   return sanitizeForUi({
     ok,
-    ...(ok || error == null ? {} : { error: String(error) }),
+    ...(ok || error == null ? {} : { error: publicActionError(error) }),
     ...extras,
     result,
   });
@@ -162,6 +163,28 @@ export async function listAccountDrafts({ toolkitRoot, envPath, shopId } = {}) {
   return sanitizeForUi({
     ok: true,
     drafts,
+    shopId: shopId == null || String(shopId).trim() === '' ? '' : String(shopId).trim(),
+    auth: client.authMeta?.() || auth,
+  });
+}
+
+
+export async function listAccountProducts({ toolkitRoot, envPath, shopId } = {}) {
+  applySessionEnv(envPath);
+  const auth = await verifiedAuth({ toolkitRoot, envPath });
+  if (!auth.loggedIn) {
+    const error = auth.expired || auth.present
+      ? '请重新登录。'
+      : '请先到「设置」里登录。';
+    return { ok: false, error, auth, products: [] };
+  }
+  const { createClient, listShops, listProducts } = await loadTools(toolkitRoot);
+  const client = clientOrThrow(createClient);
+  const shops = await listShops(client);
+  const products = await listProducts(client, { shops, shopId });
+  return sanitizeForUi({
+    ok: true,
+    products,
     shopId: shopId == null || String(shopId).trim() === '' ? '' : String(shopId).trim(),
     auth: client.authMeta?.() || auth,
   });
