@@ -90,7 +90,7 @@ export function buildListingTasks(form, shops, { publish = false } = {}) {
       ...(images.length ? { images } : {}),
       publish: publish === true,
     };
-    if (clean(form.skuPrefix)) task.skuPrefix = clean(form.skuPrefix);
+    // Leftover form.skuPrefix values are ignored and are not sent to MCP.
     if (clean(form.notes)) task.notes = clean(form.notes);
     // Intentionally omit video: current MCP runner rejects it.
     return task;

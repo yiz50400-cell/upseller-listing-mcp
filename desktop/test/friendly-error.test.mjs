@@ -86,3 +86,17 @@ test('a raw task-id mismatch is rewritten so the toast never mentions 任务 ID'
   assert.doesNotMatch(msg, /任务 ID/);
   assert.match(msg, /已保存|再选|不同/);
 });
+
+test('legacy site-mismatch errors become plain language and drop the old jargon', () => {
+  assert.equal(
+    friendlyErrorMessage(new Error('源商品与目标店铺站点不同，需单独处理分类/货币')),
+    '这个商品和目标店不在同一个站点，不能直接保存。',
+  );
+  assert.doesNotMatch(
+    friendlyErrorMessage(new Error('源商品与目标店铺站点不同，需单独处理分类/货币')),
+    /需单独处理分类\/货币/,
+  );
+  const named = '这个商品是巴西站的，不能直接保存到墨西哥店。';
+  assert.equal(friendlyErrorMessage(new Error(named)), named);
+  assert.doesNotMatch(named, /需单独处理分类\/货币/);
+});

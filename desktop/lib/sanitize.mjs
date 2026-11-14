@@ -1,3 +1,5 @@
+import { rewriteSiteMismatchError } from './site-mismatch.mjs';
+
 const SECRET_KEY = /^(cookie|deviceid|device_id|authorization|password|token|secret|upseller_cookie|upseller_device_id)$/i;
 
 export function sanitizeForUi(value, depth = 0) {
@@ -27,7 +29,7 @@ export function publicActionError(message) {
   if (/任务 ID 已用于不同内容/.test(text)) {
     return '所选商品与已保存的内容不同。请再选一次后再保存或发布。';
   }
-  return text;
+  return rewriteSiteMismatchError(text);
 }
 
 export function safeError(err) {
@@ -58,6 +60,10 @@ function looksLikeNetwork(blob) {
 export function friendlyErrorMessage(err) {
   const raw = String(err && (err.message || err.shortMessage) ? (err.message || err.shortMessage) : err || '');
   const blob = raw.replace(/\s+/g, ' ').trim();
+  const siteMismatch = rewriteSiteMismatchError(blob);
+  if (siteMismatch !== blob) {
+    return siteMismatch;
+  }
   if (/Executable doesn't exist|playwright install|ms-playwright|browserType\.launch|chromium-\d+|npx playwright/i.test(blob)) {
     return '打不开登录窗口。请换用最新试用包后再试，不用单独安装浏览器。';
   }

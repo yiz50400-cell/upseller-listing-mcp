@@ -21,5 +21,6 @@ test('a nested result.error is lifted to the top-level error field', () => {
     result: { error: '源商品与目标店铺站点不同，需单独处理分类/货币' },
   }, { mode: 'save-draft' });
   assert.equal(out.ok, false);
-  assert.equal(out.error, '源商品与目标店铺站点不同，需单独处理分类/货币');
+  assert.equal(out.error, '这个商品和目标店不在同一个站点，不能直接保存。');
+  assert.doesNotMatch(out.error, /需单独处理分类\/货币/);
 });

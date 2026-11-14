@@ -6,6 +6,7 @@ import { successActionToast } from '../lib/action-toast.mjs';
 import { bindSourceToTask, markTaskSaved, applyBoundTaskToList } from '../lib/task-bind.mjs';
 import { statusBadge, statusAfterSuccessfulAction, isSubmittedTask } from '../lib/status-badge.mjs';
 import { taskListThumbHtml } from '../lib/task-thumb.mjs';
+import { currencyOptions, selectedCurrency } from '../lib/currency-options.mjs';
 
 const api = window.upsellerDesktop;
 
@@ -22,8 +23,7 @@ function demo(id, title, sku, shopName, site, price, currency, status, age) {
     id,
     demo: true,
     title,
-    skuPrefix: sku,
-    productId: '',
+    productId: sku || '',
     shopName,
     site,
     price,
@@ -45,6 +45,16 @@ let pickerMode = 'draft';
 const checkedIds = new Set();
 
 function $(id) { return document.getElementById(id); }
+
+function fillCurrencySelect(value) {
+  const select = $('f-currency');
+  if (!select) return;
+  const selected = selectedCurrency(value);
+  const codes = currencyOptions(value);
+  select.innerHTML = codes.map((code) => `<option value="${escapeAttr(code)}">${escapeHtml(code)}</option>`).join('');
+  select.value = selected;
+}
+
 
 function visibleTasks() {
   return filterTasks(state.tasks, $('taskSearch').value);
@@ -79,8 +89,7 @@ function currentForm() {
     draftId: task.draftId || ($('f-draftIdManual') ? $('f-draftIdManual').value.trim() : ''),
     title: $('f-title').value.trim(),
     price: $('f-price').value,
-    currency: $('f-currency').value,
-    skuPrefix: $('f-skuPrefix').value.trim(),
+    currency: selectedCurrency($('f-currency').value || task.currency),
     notes: $('f-notes').value.trim(),
     mainImages: task.mainImages || [],
     galleryImages: task.galleryImages || [],
@@ -101,8 +110,7 @@ function applyForm(task) {
   try { titleInput.setSelectionRange(0, 0); } catch { /* not all inputs support this */ }
   requestAnimationFrame(() => { titleInput.scrollLeft = 0; });
   $('f-price').value = task.price || '';
-  $('f-currency').value = task.currency || 'USD';
-  $('f-skuPrefix').value = task.skuPrefix || '';
+  fillCurrencySelect(task.currency);
   $('f-notes').value = task.demo ? '' : (task.notes || '');
   formVideo = task.video || '';
   $('f-videoName').value = formVideo ? formVideo.split(/[\\/]/).pop() : '';
@@ -111,7 +119,7 @@ function applyForm(task) {
   $('footTitle').title = task.title || '';
   $('footSub').textContent = task.demo
     ? '示意内容，不会拿去上架'
-    : (task.skuPrefix ? `编号 ${task.skuPrefix}` : '先预览，再保存草稿');
+    : '先预览，再保存草稿';
   const shopSel = $('f-shop');
   const match = findShopOption([...shopSel.options], task);
   if (match) shopSel.value = match.value;
@@ -143,7 +151,7 @@ function renderRows() {
     const checked = checkedIds.has(t.id) ? 'checked' : '';
     return `<div class="task-row ${selected}" data-id="${t.id}">
       <div class="col-check"><input type="checkbox" data-check="${escapeAttr(t.id)}" ${checked} aria-label="选择 ${escapeAttr(t.title || '任务')}" /></div>
-      <div class="product-cell">${thumb}<div class="prod-meta"><div class="prod-name">${escapeHtml(t.title || '未命名')}${t.demo ? '<span class="badge demo">示意</span>' : ''}</div><div class="prod-sku">${escapeHtml(t.skuPrefix ? 'SKU: ' + t.skuPrefix : (t.productId || ''))}</div></div></div>
+      <div class="product-cell">${thumb}<div class="prod-meta"><div class="prod-name">${escapeHtml(t.title || '未命名')}${t.demo ? '<span class="badge demo">示意</span>' : ''}</div><div class="prod-sku">${escapeHtml(t.productId || '')}</div></div></div>
       <div class="shop-cell">${escapeHtml(t.shopName || '未指定')}${t.site ? `<small>(${escapeHtml(t.site)})</small>` : ''}</div>
       <div class="price-cell">${escapeHtml(String(t.price || '—'))}<div class="prod-sku">${escapeHtml(t.currency || '')}</div></div>
       <div class="status-cell">${statusBadge(t)}${t.demo ? '' : escapeHtml(t.age || '')}</div>

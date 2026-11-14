@@ -10,6 +10,7 @@ import { hash,openStore,mapLimit } from './storage.js';
 import { inspectAssets,preparePayload,verifyPayload } from './payload.js';
 import { listingFingerprint,decideListingResume } from './resume.js';
 import { listDraftsForShop } from '../tools/list_drafts.js';
+import { siteMismatchMessage } from '../site-mismatch.js';
 
 export async function runListing(client,task,options={}){
  const started=performance.now(),dryRun=options.dryRun!==false,publish=task.publish===true;
@@ -36,7 +37,7 @@ export async function runListing(client,task,options={}){
   event('preflight');const files=inspectAssets(task);const first=await read(task.draftId||task.sourceInternalId);
   if(String(first.idStr??first.id)!==String(task.draftId||task.sourceInternalId))throw new Error('源商品/草稿身份不匹配');
   if(task.productId&&!task.draftId&&String(first.itemId)!==String(task.productId))throw new Error('源商品平台 ID 不匹配');
-  if(task.targetSite&&first.site!==task.targetSite)throw new Error('源商品与目标店铺站点不同，需单独处理分类/货币');
+  if(task.targetSite&&first.site!==task.targetSite)throw new Error(siteMismatchMessage(first.site,task.targetSite));
   if(task.draftId&&String(first.shopId)!==String(task.targetShopId))throw new Error('草稿不属于目标店铺');
   const root=path.resolve(options.dataDir||path.join(os.homedir(),'.upseller-client'));
   const account=first.puid!=null?'puid:'+String(first.puid):options.accountKey||client.accountKey?.();
