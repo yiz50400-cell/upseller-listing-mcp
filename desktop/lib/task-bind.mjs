@@ -70,8 +70,13 @@ export function applyOnlineProductFields(task, product = {}) {
   if (product.price != null && product.price !== '') next.price = product.price;
   if (product.currency) next.currency = product.currency;
   if (product.site) next.site = String(product.site);
-  const sourceShop = clean(product.shopId);
-  if (sourceShop) next.sourceShopHint = sourceShop;
+  const shopId = clean(product.shopId);
+  const shopName = clean(product.shopName);
+  if (shopId || shopName) {
+    next.shopId = shopId;
+    next.shopName = shopName;
+  }
+  if (shopId) next.sourceShopHint = shopId;
   return next;
 }
 

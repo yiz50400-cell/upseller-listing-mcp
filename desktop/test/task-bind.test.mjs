@@ -8,7 +8,7 @@ import {
   bindSourceToTask,
   applyBoundTaskToList,
 } from '../lib/task-bind.mjs';
-import { applyDraftFields } from '../lib/draft-form.mjs';
+import { applyDraftFields, findShopOption } from '../lib/draft-form.mjs';
 import { isSubmittedTask, statusLabel, statusAfterSuccessfulAction } from '../lib/status-badge.mjs';
 import { taskListImageSrc } from '../lib/task-thumb.mjs';
 
@@ -90,8 +90,8 @@ test('applyOnlineProductFields copies display fields, clears draftId, and does n
   assert.equal(next.price, '286');
   assert.equal(next.currency, 'MXN');
   assert.equal(next.site, 'MX');
-  assert.equal(next.shopId, '1088498');
-  assert.equal(next.shopName, '墨西哥-14');
+  assert.equal(next.shopId, '2001');
+  assert.equal(next.shopName, '墨西哥-9店');
   assert.equal(next.sourceShopHint, '2001');
 });
 
@@ -264,4 +264,48 @@ test('loading a pictured source stores a display URL for the list and does not w
   assert.equal(bound.task.displayImageUrl, 'https://cdn.example.com/online.jpg');
   assert.deepEqual(bound.task.mainImages, []);
   assert.equal(taskListImageSrc(bound.task), 'https://cdn.example.com/online.jpg');
+});
+
+test('binding an online product switches the target shop to the product shop, not just sourceShopHint', () => {
+  const fresh = { id: 'ui-newrow', title: '新任务', status: 'draft', shopId: '2001', shopName: '墨西哥-9店' };
+  const brazilProduct = {
+    productId: 'P-BR-88',
+    title: 'Sérum Facial SADOER',
+    shopId: '653107',
+    shopName: 'Tiktok-巴西2店 (张佳)',
+    price: '88',
+    currency: 'BRL',
+    site: 'BR',
+  };
+  const bound = bindSourceToTask(fresh, { kind: 'product', product: brazilProduct }, 11);
+  assert.equal(bound.forked, false);
+  assert.equal(bound.task.id, 'ui-newrow');
+  assert.equal(bound.task.shopId, '653107');
+  assert.equal(bound.task.shopName, 'Tiktok-巴西2店 (张佳)');
+  assert.equal(bound.task.sourceShopHint, '653107');
+  assert.equal(bound.task.title, 'Sérum Facial SADOER');
+  assert.equal(bound.task.price, '88');
+  const options = [
+    { value: '0', dataset: { id: '653107', name: 'Tiktok-巴西2店 (张佳)' } },
+    { value: '1', dataset: { id: '2001', name: '墨西哥-9店' } },
+  ];
+  assert.equal(findShopOption(options, bound.task)?.value, '0');
+});
+
+test('binding a draft still switches the target shop to the draft shop', () => {
+  const fresh = { id: 'ui-newrow', title: '新任务', status: 'draft', shopId: '2001', shopName: '墨西哥-9店' };
+  const bound = bindSourceToTask(fresh, {
+    kind: 'draft',
+    draft: { itemTitle: draftA.title, shopId: draftA.shopId, shopName: draftA.shopName, itemId: '' },
+    draftId: draftA.draftId,
+  }, 12);
+  assert.equal(bound.task.id, 'ui-newrow');
+  assert.equal(bound.task.shopId, draftA.shopId);
+  assert.equal(bound.task.shopName, draftA.shopName);
+  const options = [
+    { value: '0', dataset: { id: '653107', name: 'Tiktok-巴西2店 (张佳)' } },
+    { value: '1', dataset: { id: draftA.shopId, name: draftA.shopName } },
+    { value: '2', dataset: { id: '2001', name: '墨西哥-9店' } },
+  ];
+  assert.equal(findShopOption(options, bound.task)?.value, '1');
 });

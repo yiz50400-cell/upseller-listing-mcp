@@ -225,7 +225,7 @@ button { cursor: pointer; }
 .btn.primary { background: var(--accent); border-color: transparent; color: #fff; }
 .btn.primary:hover { background: var(--accent-2); }
 .btn.danger { background: #8a2430; border-color: transparent; color: #fff; }
-.btn:disabled { opacity: 0.5; cursor: default; }
+.btn:disabled, .text-btn:disabled, .ghost:disabled { opacity: 0.5; cursor: default; }
 .publish-wrap { text-align: right; }
 .publish-hint { font-size: 10px; color: var(--faint); margin-top: 4px; }
 

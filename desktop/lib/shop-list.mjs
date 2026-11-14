@@ -59,3 +59,49 @@ export function shopsAfterLogout(existing) {
       source: 'manual',
     }));
 }
+
+export function isManualShop(shop) {
+  if (!shop || shop.demo) return false;
+  if (shop.source === 'account') return false;
+  return Boolean(clean(shop.id) || clean(shop.name));
+}
+
+export function canRemoveShop(shop) {
+  return isManualShop(shop);
+}
+
+export function sameShop(a, b) {
+  if (!a || !b) return false;
+  const aId = clean(a.id ?? a.shopId);
+  const bId = clean(b.id ?? b.shopId);
+  const aName = clean(a.name ?? a.shopName);
+  const bName = clean(b.name ?? b.shopName);
+  if (aId || bId) return aId === bId;
+  return Boolean(aName && aName === bName);
+}
+
+/** Remove a manual shop from the local list only. Account shops stay. */
+export function removeManualShop(shops, target) {
+  const list = Array.isArray(shops) ? shops.slice() : [];
+  if (!canRemoveShop(target)) return { shops: list, removed: null };
+  let removed = null;
+  const next = list.filter((shop) => {
+    if (!removed && canRemoveShop(shop) && sameShop(shop, target)) {
+      removed = shop;
+      return false;
+    }
+    return true;
+  });
+  return { shops: next, removed };
+}
+
+/** If the current dropdown shop was removed, clear it instead of leaving a stale value. */
+export function selectionAfterRemovingShop(selection, removed) {
+  if (!removed || !sameShop(selection, removed)) {
+    return {
+      shopId: clean(selection?.shopId ?? selection?.id),
+      shopName: clean(selection?.shopName ?? selection?.name),
+    };
+  }
+  return { shopId: '', shopName: '' };
+}

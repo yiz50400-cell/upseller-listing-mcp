@@ -1,5 +1,6 @@
 import { ensureTaskList, deleteTasks, createProduct, nextSelectedId, visibleTasks as filterTasks } from './task-list.mjs';
 import { realShops, isPlaceholderShopName, runBlockReason } from './run-guards.mjs';
+import { canRemoveShop, removeManualShop } from '../lib/shop-list.mjs';
 import { applyDraftFields, findShopOption } from '../lib/draft-form.mjs';
 import { draftPickerLabel, productPickerLabel, filterListedItems, formatListPrice, pickerThumbHtml } from '../lib/picker-view.mjs';
 import { successActionToast } from '../lib/action-toast.mjs';
@@ -122,7 +123,8 @@ function applyForm(task) {
     : '先预览，再保存草稿';
   const shopSel = $('f-shop');
   const match = findShopOption([...shopSel.options], task);
-  if (match) shopSel.value = match.value;
+  shopSel.value = match ? match.value : '';
+  updateRemoveShopButton();
   renderPickerTriggers();
   renderThumbs();
 }
@@ -194,23 +196,45 @@ function shopOptionLabel(shop) {
   return name;
 }
 
-function renderShops() {
-  const list = (state.shops || []).filter((shop) => shop && (shop.id || shop.name) && !shop.demo);
+function listedShops() {
+  return (state.shops || []).filter((shop) => shop && (shop.id || shop.name) && !shop.demo);
+}
+
+function selectedShopFromSelect() {
+  const select = $('f-shop');
+  const list = listedShops();
+  const index = Number(select.value);
+  if (!Number.isInteger(index) || index < 0) return null;
+  return list[index] || null;
+}
+
+function updateRemoveShopButton() {
+  const btn = $('removeShopBtn');
+  if (!btn) return;
+  btn.disabled = !canRemoveShop(selectedShopFromSelect());
+}
+
+function renderShops({ missingSelection = 'fallback' } = {}) {
+  const list = listedShops();
   const select = $('f-shop');
   const previousId = select.selectedOptions[0]?.dataset.id || '';
   const previousName = select.selectedOptions[0]?.dataset.name || '';
   if (!list.length) {
     const empty = state.auth?.loggedIn ? '还没有店铺。登录后仍列不出店时，请点「刷新店铺」。' : '还没有店铺。登录后会自动列出账号里的店。';
     select.innerHTML = `<option value="" disabled selected>${empty}</option>`;
+    updateRemoveShopButton();
     return;
   }
-  select.innerHTML = list.map((s, i) => {
+  select.innerHTML = '<option value=""></option>' + list.map((s, i) => {
     const disabled = s.expired ? ' disabled' : '';
     return `<option value="${i}" data-name="${escapeAttr(s.name || '')}" data-id="${escapeAttr(s.id || '')}"${disabled}>${escapeHtml(shopOptionLabel(s))}</option>`;
   }).join('');
   const match = list.findIndex((s) => (previousId && s.id === previousId) || (!previousId && previousName && s.name === previousName));
   const firstUsable = list.findIndex((s) => !s.expired);
-  select.value = String(match >= 0 ? match : (firstUsable >= 0 ? firstUsable : 0));
+  if (match >= 0) select.value = String(match);
+  else if (missingSelection === 'empty' || previousId || previousName) select.value = '';
+  else select.value = String(firstUsable >= 0 ? firstUsable : 0);
+  updateRemoveShopButton();
 }
 
 function renderAuth() {
@@ -642,6 +666,17 @@ $('confirmPublish').addEventListener('click', async () => {
   await run('publish', true);
 });
 
+$('f-shop').addEventListener('change', updateRemoveShopButton);
+$('removeShopBtn').addEventListener('click', async () => {
+  const shop = selectedShopFromSelect();
+  if (!canRemoveShop(shop)) return;
+  const result = removeManualShop(state.shops, shop);
+  if (!result.removed) return;
+  state.shops = result.shops;
+  await api.saveState({ shops: state.shops });
+  renderShops({ missingSelection: 'empty' });
+  renderPickerShops($('pickerShop'));
+});
 $('toggleShopAdd').addEventListener('click', () => {
   $('shopAddRow').classList.toggle('hidden');
 });
@@ -657,6 +692,7 @@ $('addShopBtn').addEventListener('click', async () => {
   renderShops();
   const real = realShops(state.shops);
   if (real.length) $('f-shop').value = String(real.length - 1);
+  updateRemoveShopButton();
   toast('已添加店铺');
 });
 
