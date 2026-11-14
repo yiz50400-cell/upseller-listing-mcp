@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { statusLabel, statusBadge, statusAfterSuccessfulAction } from '../lib/status-badge.mjs';
+import { statusLabel, statusBadge, statusAfterSuccessfulAction, isSubmittedTask } from '../lib/status-badge.mjs';
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const app = fs.readFileSync(path.join(root, '../renderer/app.js'), 'utf8');
@@ -42,4 +42,13 @@ test('the renderer uses the shared status helper and stores submitted after a su
   assert.match(app, /statusBadge/);
   assert.match(app, /from '\.\.\/lib\/status-badge\.mjs'/);
   assert.doesNotMatch(app, /mode === 'publish'\) saved\.status = 'wait'/);
+});
+
+test('preview and save-draft do not relabel submitted or historical wait rows as drafts', () => {
+  assert.equal(isSubmittedTask({ status: 'submitted' }), true);
+  assert.equal(isSubmittedTask({ status: 'wait' }), true);
+  assert.equal(statusAfterSuccessfulAction('preview', 'submitted'), 'submitted');
+  assert.equal(statusAfterSuccessfulAction('save-draft', 'wait'), 'wait');
+  assert.equal(statusLabel({ status: statusAfterSuccessfulAction('preview', 'submitted') }), '已提交');
+  assert.equal(statusLabel({ status: statusAfterSuccessfulAction('save-draft', 'wait') }), '已提交');
 });

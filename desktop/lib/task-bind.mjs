@@ -1,4 +1,6 @@
 import { applyDraftFields } from './draft-form.mjs';
+import { applyDisplayImage } from './task-thumb.mjs';
+import { isSubmittedTask } from './status-badge.mjs';
 
 function clean(value) {
   return value == null ? '' : String(value).trim();
@@ -8,8 +10,24 @@ export function newTaskId(now = Date.now()) {
   return `ui-${Number(now).toString(36)}`;
 }
 
+function freshDraftTask(now = Date.now()) {
+  return {
+    id: newTaskId(now),
+    title: '新任务',
+    status: 'draft',
+    mainImages: [],
+    galleryImages: [],
+    skuImages: [],
+    demo: false,
+    savedOnce: false,
+    savedDraftId: '',
+    savedProductId: '',
+  };
+}
+
 export function markTaskSaved(task, result = {}) {
-  const next = { ...(task || {}), status: 'draft', savedOnce: true };
+  const next = { ...(task || {}), savedOnce: true };
+  if (!isSubmittedTask(task)) next.status = 'draft';
   const draftId = clean(result.draftId || task?.draftId);
   if (draftId) {
     next.draftId = draftId;
@@ -57,18 +75,65 @@ export function applyOnlineProductFields(task, product = {}) {
   return next;
 }
 
-export function bindSourceToTask(task, source = {}, now = Date.now()) {
+function sourceRow(source = {}) {
+  const kind = source.kind === 'product' ? 'product' : 'draft';
+  return kind === 'product' ? (source.product || source) : (source.draft || source);
+}
+
+function applySourceFields(task, source = {}) {
   const kind = source.kind === 'product' ? 'product' : 'draft';
   const binding = kind === 'product'
     ? { productId: clean(source.product?.productId || source.product?.itemId || source.productId), draftId: '' }
     : { draftId: clean(source.draftId || source.draft?.draftId), productId: clean(source.draft?.itemId || source.draft?.productId) };
-  const rotate = needsNewTaskId(task, binding);
-  let next = rotate ? rotateTaskIdentity(task, now) : { ...(task || {}) };
+  let next = kind === 'product'
+    ? applyOnlineProductFields(task, source.product || source)
+    : applyDraftFields(task, source.draft || {}, binding.draftId);
+  next = applyDisplayImage(next, sourceRow(source));
+  return { next, kind, binding };
+}
+
+export function bindSourceToTask(task, source = {}, now = Date.now()) {
   const previousId = task?.id;
-  if (kind === 'product') {
-    next = applyOnlineProductFields(next, source.product || source);
-  } else {
-    next = applyDraftFields(next, source.draft || {}, binding.draftId);
+  if (isSubmittedTask(task)) {
+    const { next } = applySourceFields(freshDraftTask(now), source);
+    return { task: next, forked: true, rotated: false, previousId };
   }
-  return { task: next, rotated: rotate, previousId };
+  const { next: applied, binding } = applySourceFields(task, source);
+  const rotate = needsNewTaskId(task, binding);
+  const next = rotate ? applySourceFields(rotateTaskIdentity(task, now), source).next : applied;
+  if (!next.demo && next.status !== 'live' && !isSubmittedTask(next)) next.status = 'draft';
+  return { task: next, forked: false, rotated: rotate, previousId };
+}
+
+export function applyBoundTaskToList(tasks, bound, { selectedId = null, checkedIds = [] } = {}) {
+  const list = Array.isArray(tasks) ? tasks.slice() : [];
+  const checked = new Set(checkedIds);
+  if (bound?.forked) {
+    return {
+      tasks: [bound.task, ...list],
+      selectedId: bound.task.id,
+      checkedIds: checked,
+    };
+  }
+  if (bound?.rotated) {
+    if (bound.previousId && checked.has(bound.previousId)) {
+      checked.delete(bound.previousId);
+      checked.add(bound.task.id);
+    }
+    return {
+      tasks: list.map((item) => (item.id === bound.previousId ? bound.task : item)),
+      selectedId: !selectedId || selectedId === bound.previousId ? bound.task.id : selectedId,
+      checkedIds: checked,
+    };
+  }
+  const currentId = bound?.task?.id || bound?.previousId;
+  return {
+    tasks: list.map((item) => {
+      if (item.id !== currentId && item.id !== bound?.previousId) return item;
+      Object.assign(item, bound.task, { id: item.id });
+      return item;
+    }),
+    selectedId: currentId,
+    checkedIds: checked,
+  };
 }

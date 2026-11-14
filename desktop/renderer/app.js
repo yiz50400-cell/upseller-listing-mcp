@@ -3,8 +3,9 @@ import { realShops, isPlaceholderShopName, runBlockReason } from './run-guards.m
 import { applyDraftFields, findShopOption } from '../lib/draft-form.mjs';
 import { draftPickerLabel, productPickerLabel, filterListedItems, formatListPrice, pickerThumbHtml } from '../lib/picker-view.mjs';
 import { successActionToast } from '../lib/action-toast.mjs';
-import { bindSourceToTask, markTaskSaved } from '../lib/task-bind.mjs';
-import { statusBadge, statusAfterSuccessfulAction } from '../lib/status-badge.mjs';
+import { bindSourceToTask, markTaskSaved, applyBoundTaskToList } from '../lib/task-bind.mjs';
+import { statusBadge, statusAfterSuccessfulAction, isSubmittedTask } from '../lib/status-badge.mjs';
+import { taskListThumbHtml } from '../lib/task-thumb.mjs';
 
 const api = window.upsellerDesktop;
 
@@ -29,7 +30,6 @@ function demo(id, title, sku, shopName, site, price, currency, status, age) {
     currency,
     status,
     age,
-    copyToShopCount: 1,
     mainImages: [],
     galleryImages: [],
     skuImages: [],
@@ -82,7 +82,6 @@ function currentForm() {
     currency: $('f-currency').value,
     skuPrefix: $('f-skuPrefix').value.trim(),
     notes: $('f-notes').value.trim(),
-    copyToShopCount: Number($('f-copyCount').value) || 1,
     mainImages: task.mainImages || [],
     galleryImages: task.galleryImages || [],
     skuImages: task.skuImages || [],
@@ -105,7 +104,6 @@ function applyForm(task) {
   $('f-currency').value = task.currency || 'USD';
   $('f-skuPrefix').value = task.skuPrefix || '';
   $('f-notes').value = task.demo ? '' : (task.notes || '');
-  $('f-copyCount').value = task.copyToShopCount || 1;
   formVideo = task.video || '';
   $('f-videoName').value = formVideo ? formVideo.split(/[\\/]/).pop() : '';
   const footTitle = task.title || '未命名任务';
@@ -140,9 +138,7 @@ function fileUrl(file) {
 function renderRows() {
   const rows = visibleTasks();
   $('taskRows').innerHTML = rows.map((t) => {
-    const thumb = (t.mainImages && t.mainImages[0])
-      ? `<img class="thumb" src="${fileUrl(t.mainImages[0])}" alt="" />`
-      : `<div class="thumb ph">图</div>`;
+    const thumb = taskListThumbHtml(t, fileUrl);
     const selected = t.id === selectedId ? 'selected' : '';
     const checked = checkedIds.has(t.id) ? 'checked' : '';
     return `<div class="task-row ${selected}" data-id="${t.id}">
@@ -156,6 +152,14 @@ function renderRows() {
   }).join('');
   const empty = $('emptyTasks');
   if (empty) empty.classList.toggle('hidden', rows.length > 0);
+  for (const img of $('taskRows').querySelectorAll('img[data-fallback-thumb]')) {
+    img.addEventListener('error', () => {
+      const ph = document.createElement('div');
+      ph.className = 'thumb ph';
+      ph.textContent = '图';
+      img.replaceWith(ph);
+    });
+  }
   syncCheckAll();
 }
 
@@ -352,18 +356,38 @@ async function openPicker(mode) {
   else await fetchProducts({ quiet: true });
 }
 
-function replaceBoundTask(current, bound) {
-  if (bound.rotated) {
-    state.tasks = state.tasks.map((task) => (task.id === bound.previousId ? bound.task : task));
-    if (selectedId === bound.previousId) selectedId = bound.task.id;
-    if (checkedIds.has(bound.previousId)) {
-      checkedIds.delete(bound.previousId);
-      checkedIds.add(bound.task.id);
-    }
-    return bound.task;
+function taskForSourceBind() {
+  let task = state.tasks.find((item) => item.id === selectedId);
+  if (!task) {
+    task = createProduct();
+    selectedId = task.id;
+    state.tasks = [task, ...state.tasks];
+    return task;
   }
-  Object.assign(current, bound.task, { id: current.id });
-  return current;
+  if (isSubmittedTask(task)) return task;
+  const form = currentForm();
+  Object.assign(task, form, { id: task.id, status: task.status || 'draft', demo: Boolean(task.demo) });
+  return task;
+}
+
+function replaceBoundTask(current, bound) {
+  const next = applyBoundTaskToList(state.tasks, bound, { selectedId, checkedIds });
+  state.tasks = next.tasks;
+  selectedId = next.selectedId;
+  checkedIds.clear();
+  for (const id of next.checkedIds) checkedIds.add(id);
+  return state.tasks.find((task) => task.id === selectedId) || bound.task || current;
+}
+
+function bindResultToast(kind, bound) {
+  if (kind === 'product') {
+    if (bound.forked) return '已新增任务并复制在线商品';
+    if (bound.rotated) return '已换到新的任务并复制在线商品';
+    return '已复制在线商品';
+  }
+  if (bound.forked) return '已新增任务并载入草稿';
+  if (bound.rotated) return '已换到新的任务并载入草稿';
+  return '已载入草稿';
 }
 
 async function bindDraft(id) {
@@ -378,13 +402,13 @@ async function bindDraft(id) {
     toast(msg.startsWith('载入草稿') ? msg : `载入草稿：${msg}`, true);
     return;
   }
-  const current = ensureTask();
+  const current = taskForSourceBind();
   const bound = bindSourceToTask(current, { kind: 'draft', draft: out.draft, draftId: out.draftId || draftId });
   const task = replaceBoundTask(current, bound);
   await persistTasks(state.tasks);
   applyForm(task);
   renderRows();
-  toast(bound.rotated ? '已换到新的任务并载入草稿' : '已载入草稿');
+  toast(bindResultToast('draft', bound));
 }
 
 async function bindOnlineProduct(id) {
@@ -398,13 +422,13 @@ async function bindOnlineProduct(id) {
     toast('找不到这个产品。请从列表里重新选择。', true);
     return;
   }
-  const current = ensureTask();
+  const current = taskForSourceBind();
   const bound = bindSourceToTask(current, { kind: 'product', product });
   const task = replaceBoundTask(current, bound);
   await persistTasks(state.tasks);
   applyForm(task);
   renderRows();
-  toast(bound.rotated ? '已换到新的任务并复制在线商品' : '已复制在线商品');
+  toast(bindResultToast('product', bound));
 }
 
 async function loadDraftById(id) {
@@ -508,7 +532,10 @@ async function run(mode, confirmPublish = false) {
     return result;
   }
   toast(successActionToast(mode, { videoIgnored: Boolean(result.videoIgnored) }));
-  if (mode === 'save-draft') Object.assign(saved, markTaskSaved(saved, { draftId: result?.draftId || result?.result?.draftId || saved.draftId }));
+  if (mode === 'save-draft') {
+    const marked = markTaskSaved(saved, { draftId: result?.draftId || result?.result?.draftId || saved.draftId });
+    Object.assign(saved, marked, { status: isSubmittedTask(saved) ? saved.status : marked.status });
+  }
   if (mode === 'publish') saved.status = statusAfterSuccessfulAction('publish', saved.status);
   await persistTasks(state.tasks);
   renderRows();

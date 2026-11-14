@@ -31,18 +31,15 @@ export function matchFormShop(shops, form = {}) {
   return null;
 }
 
-export function selectedShops(shops, copyToShopCount, form = {}) {
+export function selectedShops(shops, formOrCount = {}, maybeForm) {
+  // A task maps to the single shop in the form. Leftover copyToShopCount
+  // values on older tasks or stale callers are ignored and must not pick
+  // extra shops.
+  const form = formOrCount && typeof formOrCount === 'object' ? formOrCount : (maybeForm && typeof maybeForm === 'object' ? maybeForm : {});
   const list = realShops(shops);
   const picked = matchFormShop(shops, form);
-  // Editing an existing draft is not "copy to N shops".
-  const n = clean(form.draftId) ? 1 : Math.max(1, Number(copyToShopCount) || 1);
-  if (n === 1) {
-    const used = picked ? [picked] : list.slice(0, 1);
-    return { wanted: 1, used, available: list.length };
-  }
-  const rest = picked ? list.filter((shop) => shop !== picked) : list;
-  const used = (picked ? [picked, ...rest] : list).slice(0, n);
-  return { wanted: n, used, available: list.length };
+  const used = picked ? [picked] : list.slice(0, 1);
+  return { wanted: 1, used, available: list.length };
 }
 
 export function buildImageList(form) {
@@ -69,11 +66,8 @@ export function buildListingTasks(form, shops, { publish = false } = {}) {
 
   const productId = clean(form.productId);
   const draftId = clean(form.draftId);
-  const shopPick = selectedShops(shops, form.copyToShopCount, form);
+  const shopPick = selectedShops(shops, form);
   if (shopPick.used.length < 1) throw new Error('请先添加店铺。');
-  if (shopPick.used.length < shopPick.wanted) {
-    // still proceed with what we have, but surface a warning
-  }
 
   const title = clean(form.title) || undefined;
   let productPrice;
@@ -105,9 +99,6 @@ export function buildListingTasks(form, shops, { publish = false } = {}) {
   return {
     tasks,
     warnings: [
-      ...(shopPick.used.length < shopPick.wanted
-        ? [`复制到 ${shopPick.wanted} 店，但当前只配置了 ${shopPick.used.length} 个目标店铺，已按现有店铺生成任务。`]
-        : []),
       ...(clean(form.video) ? ['当前上架能力尚不处理视频；视频仅保存在本地任务中，不会发给预览/草稿/发布流程。'] : []),
     ],
     videoIgnored: Boolean(clean(form.video)),

@@ -21,7 +21,6 @@ export function createProduct(now = Date.now()) {
     id: `ui-${now.toString(36)}`,
     title: '新任务',
     status: 'draft',
-    copyToShopCount: 1,
     mainImages: [],
     galleryImages: [],
     skuImages: [],

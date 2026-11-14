@@ -21,7 +21,7 @@ test('blocks demo rows and placeholder shops', () => {
   assert.equal(used[0].name, '店铺甲');
 });
 
-test('builds one task per selected shop and omits video', () => {
+test('builds one task for the selected shop and omits video', () => {
   const shops = [
     { id: 's1', name: '店铺甲' },
     { id: 's2', name: '店铺乙' },
@@ -39,15 +39,16 @@ test('builds one task per selected shop and omits video', () => {
     taskId: 'ui-1',
   };
   const out = buildListingTasks(form, shops, { publish: false });
-  assert.equal(out.tasks.length, 2);
-  assert.equal(out.tasks[0].taskId, 'ui-1-1');
+  assert.equal(out.tasks.length, 1);
+  assert.equal(out.tasks[0].taskId, 'ui-1');
   assert.equal(out.tasks[0].targetShopId, 's1');
-  assert.equal(out.tasks[1].targetShopName, '店铺乙');
+  assert.equal(out.tasks[0].targetShopName, '店铺甲');
   assert.equal(out.tasks[0].publish, false);
   assert.equal(out.tasks[0].productPrice, 19.9);
   assert.deepEqual(out.tasks[0].images[0], { path: '/tmp/main.jpg', role: 'main' });
   assert.equal(out.videoIgnored, true);
   assert.ok(out.warnings.some((w) => /视频/.test(w)));
+  assert.equal(out.warnings.some((w) => /复制到/.test(w)), false);
   assert.ok(!('video' in out.tasks[0]));
 });
 
@@ -58,10 +59,16 @@ test('publish flag is explicit and main image is unique', () => {
   assert.throws(() => buildImageList({ mainImages: ['a.jpg', 'b.jpg'] }), /主图只能选一张/);
 });
 
-test('selectedShops caps at requested count', () => {
-  const { wanted, used } = selectedShops([{ name: 'A' }, { name: 'B' }, { name: 'C' }], 2);
-  assert.equal(wanted, 2);
-  assert.equal(used.length, 2);
+test('selectedShops ignores leftover copyToShopCount and only uses the form shop', () => {
+  const shops = [{ name: 'A' }, { name: 'B' }, { name: 'C' }];
+  const ignored = selectedShops(shops, 2);
+  assert.equal(ignored.wanted, 1);
+  assert.equal(ignored.used.length, 1);
+  assert.equal(ignored.used[0].name, 'A');
+  const picked = selectedShops(shops, { shopName: 'C', copyToShopCount: 3 });
+  assert.equal(picked.wanted, 1);
+  assert.equal(picked.used.length, 1);
+  assert.equal(picked.used[0].name, 'C');
 });
 
 test('editing an existing draft builds one task even if copyToShopCount is higher', () => {
@@ -114,7 +121,7 @@ test('dropdown shop is used instead of the first shops in the list', () => {
   assert.notEqual(out.tasks[0].targetShopName, '22');
 });
 
-test('copying a product to several shops starts with the dropdown shop and does not reuse a draftId', () => {
+test('copying a product uses only the dropdown shop even if a leftover copyToShopCount is higher', () => {
   const shops = [
     { id: 's-manual', name: '22', source: 'manual' },
     { id: 's-a', name: '店铺甲', source: 'account' },
@@ -127,11 +134,13 @@ test('copying a product to several shops starts with the dropdown shop and does 
     shopName: '店铺乙',
   };
   const out = buildListingTasks(form, shops, { publish: false });
-  assert.equal(out.tasks.length, 2);
+  assert.equal(out.tasks.length, 1);
   assert.equal(out.tasks[0].targetShopId, 's-b');
-  assert.equal(out.tasks[1].targetShopId, 's-manual');
-  assert.deepEqual(out.tasks.map((task) => task.targetShopId), ['s-b', 's-manual']);
-  assert.ok(out.tasks.every((task) => !task.draftId));
+  assert.equal(out.tasks[0].targetShopName, '店铺乙');
+  assert.ok(!out.tasks[0].draftId);
   const picked = matchFormShop(shops, form);
   assert.equal(picked.id, 's-b');
+  const { used } = selectedShops(shops, form.copyToShopCount, form);
+  assert.equal(used.length, 1);
+  assert.equal(used[0].id, 's-b');
 });
