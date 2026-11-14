@@ -10,7 +10,14 @@ artifacts/
 tasks/
 assets/
 logs/
-desktop/
 .upseller-login-profile/
 *.pem
 *.key
+
+# Desktop trial (keep source; ignore builds and local secrets)
+desktop/dist/
+desktop/node_modules/
+desktop/out/
+desktop/*.log
+desktop/.env
+desktop/.env.*

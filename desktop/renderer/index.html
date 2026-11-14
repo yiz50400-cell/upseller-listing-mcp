@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data: blob: http: https:; script-src 'self'" />
+  <title>自动上架</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-name">自动上架</span>
+      </div>
+      <nav class="nav">
+        <button class="nav-item active" data-nav="tasks" type="button"><span class="ico">☰</span>任务</button>
+        <button class="nav-item" data-nav="settings" type="button"><span class="ico">⚙</span>设置</button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="user-chip">
+          <span class="avatar">A</span>
+          <div>
+            <div class="user-name" id="userName">本地用户</div>
+            <div class="user-state" id="userState">未登录</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="titlebar">
+        <div class="titlebar-drag">
+          <span class="window-title">自动上架</span>
+        </div>
+        <div class="titlebar-right">
+          <span class="login-pill" id="loginPill"><i></i>未登录</span>
+          <div class="win-controls">
+            <button type="button" data-win="min" aria-label="最小化">–</button>
+            <button type="button" data-win="max" aria-label="最大化">□</button>
+            <button type="button" data-win="close" class="close" aria-label="关闭">×</button>
+          </div>
+        </div>
+      </header>
+
+      <section class="page active" id="page-tasks">
+        <div class="task-list-card">
+          <div class="list-toolbar">
+            <label class="search">
+              <input id="taskSearch" type="search" placeholder="搜索产品或编号" aria-label="搜索产品或编号" />
+            </label>
+            <div class="list-toolbar-actions">
+              <button type="button" class="btn" id="deleteSelectedBtn">删除所选</button>
+              <button type="button" class="btn primary" id="newTaskBtn">添加产品</button>
+            </div>
+          </div>
+          <div class="table-head">
+            <div class="col-check"><input type="checkbox" id="checkAll" aria-label="全选任务" /></div>
+            <div class="col-product">产品</div>
+            <div class="col-shop">目标店</div>
+            <div class="col-price">价格</div>
+            <div class="col-status">状态</div>
+            <div class="col-actions">操作</div>
+          </div>
+          <div class="table-body" id="taskRows"></div>
+          <div class="empty-tasks hidden" id="emptyTasks">还没有产品。点「添加产品」即可新增一行，再填写产品信息。</div>
+        </div>
+
+        <div class="editor-card">
+          <div class="editor-grid">
+            <div class="editor-fields">
+              <label class="full">从草稿箱选择
+                <span class="field">
+                  <button type="button" class="picker-trigger" id="openDraftPickerBtn">
+                    <span class="picker-trigger-label" id="draftPickerLabelText">从草稿箱选择</span>
+                    <span class="picker-chevron" aria-hidden="true">▾</span>
+                  </button>
+                  <button type="button" class="ghost text-btn" id="refreshDraftsBtn">刷新</button>
+                </span>
+              </label>
+              <label class="full">复制在线商品
+                <span class="field">
+                  <button type="button" class="picker-trigger" id="openProductPickerBtn">
+                    <span class="picker-trigger-label" id="productPickerLabelText">复制在线商品</span>
+                    <span class="picker-chevron" aria-hidden="true">▾</span>
+                  </button>
+                  <button type="button" class="ghost text-btn" id="refreshProductsBtn">刷新</button>
+                </span>
+              </label>
+              <label>价格
+                <span class="field price-field">
+                  <input id="f-price" type="number" min="0" step="0.01" placeholder="0.00" />
+                  <select id="f-currency">
+                    <option>USD</option>
+                    <option>EUR</option>
+                    <option>GBP</option>
+                    <option>MXN</option>
+                    <option>BRL</option>
+                  </select>
+                </span>
+              </label>
+              <label class="full">标题
+                <input id="f-title" type="text" placeholder="产品标题" />
+              </label>
+              <label class="full">目标店铺
+                <span class="field">
+                  <select id="f-shop"></select>
+                  <button type="button" class="ghost text-btn" id="removeShopBtn" disabled>删除店铺</button>
+                  <button type="button" class="ghost text-btn" id="refreshShopsBtn">刷新店铺</button>
+                  <button type="button" class="ghost text-btn" id="toggleShopAdd">手动添加</button>
+                </span>
+              </label>
+              <div class="shop-add hidden full" id="shopAddRow">
+                <input id="shopName" type="text" placeholder="店铺名称" />
+                <input id="shopId" type="text" placeholder="店铺编号，选填" />
+                <button type="button" class="btn" id="addShopBtn">保存店铺</button>
+              </div>
+              <label>草稿编号
+                <span class="field">
+                  <input id="f-draftIdManual" type="text" placeholder="草稿编号" />
+                  <button type="button" class="ghost text-btn" id="loadDraftBtn" title="按草稿编号载入">载入</button>
+                </span>
+              </label>
+              <label>产品ID
+                <input id="f-productId" type="text" placeholder="产品编号" />
+              </label>
+              <label class="full">备注
+                <input id="f-notes" type="text" placeholder="选填，只保存在本机" />
+              </label>
+              <label class="full">视频
+                <span class="field">
+                  <input id="f-videoName" type="text" readonly placeholder="选填" />
+                  <button type="button" class="ghost" id="pickVideoBtn">选择视频</button>
+                  <button type="button" class="ghost" id="clearVideoBtn">清除</button>
+                </span>
+              </label>
+            </div>
+            <div class="editor-media">
+              <div class="media-row">
+                <div class="media-label">主图</div>
+                <div class="thumbs" id="mainThumbs"></div>
+                <button type="button" class="add-tile" id="addMain">＋ 添加主图</button>
+              </div>
+              <div class="media-row">
+                <div class="media-label">附图</div>
+                <div class="thumbs" id="galleryThumbs"></div>
+                <button type="button" class="add-tile" id="addGallery">＋ 添加附图</button>
+              </div>
+              <div class="media-row">
+                <div class="media-label">SKU图</div>
+                <div class="thumbs" id="skuThumbs"></div>
+                <button type="button" class="add-tile" id="addSku">＋ 添加SKU图</button>
+              </div>
+            </div>
+          </div>
+          <div class="editor-foot">
+            <div class="foot-id">
+              <div class="foot-title" id="footTitle">未命名任务</div>
+              <div class="foot-sub" id="footSub">先预览，再保存草稿</div>
+            </div>
+            <div class="actions">
+              <button type="button" class="btn" id="btnPreview">预览</button>
+              <button type="button" class="btn primary" id="btnDraft">保存草稿</button>
+              <button type="button" class="btn" id="btnPublish">发布</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-settings">
+        <div class="plain-card">
+          <h2>设置</h2>
+          <p class="login-status" id="authStatus">未登录</p>
+          <div class="row-form">
+            <button type="button" class="btn primary" id="loginBtn">登录 Upseller</button>
+            <button type="button" class="btn hidden" id="logoutBtn">退出登录</button>
+            <button type="button" class="btn" id="refreshAuthBtn">重新检查</button>
+          </div>
+          <p class="fine" id="authHint">登录后才能预览和保存草稿。</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal hidden" id="confirmModal">
+    <div class="modal-card">
+      <h3>确认发布？</h3>
+      <p>发布不是默认操作。只有再次确认后才会发布。预览和保存草稿都不会发布。</p>
+      <div class="row-form end">
+        <button type="button" class="btn" id="cancelPublish">取消</button>
+        <button type="button" class="btn danger" id="confirmPublish">我确认要发布</button>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="picker-modal hidden" id="pickerModal">
+    <div class="picker-card" role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
+      <div class="picker-head">
+        <h3 id="pickerTitle">从草稿箱选择</h3>
+        <button type="button" class="picker-close" id="pickerClose" aria-label="关闭">×</button>
+      </div>
+      <div class="picker-toolbar">
+        <label class="search">
+          <input id="pickerSearch" type="search" placeholder="搜索标题或编号" aria-label="搜索标题或编号" />
+        </label>
+        <select id="pickerShop" aria-label="按店铺筛选">
+          <option value="">全部店铺</option>
+        </select>
+        <button type="button" class="ghost text-btn" id="pickerRefresh">刷新</button>
+      </div>
+      <div class="picker-table">
+        <div class="picker-table-head">
+          <div class="picker-col-product">产品标题</div>
+          <div class="picker-col-shop">店铺</div>
+          <div class="picker-col-price">价格</div>
+        </div>
+        <div class="picker-table-body" id="pickerRows"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast hidden" id="toast"></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+function clean(value) {
+  return String(value ?? '').trim();
+}
+
+export function normalizeAccountShop(row) {
+  return {
+    id: clean(row?.id),
+    name: clean(row?.name),
+    site: row?.site ? String(row.site) : '',
+    expired: Boolean(row?.expired),
+    source: 'account',
+  };
+}
+
+/** Account shops first; keep unmatched manual shops as a fallback only. */
+export function mergeShops(existing, accountRows) {
+  const account = (Array.isArray(accountRows) ? accountRows : [])
+    .map(normalizeAccountShop)
+    .filter((shop) => shop.id || shop.name);
+  const accountIds = new Set(account.map((shop) => shop.id).filter(Boolean));
+  const accountNames = new Set(account.map((shop) => shop.name).filter(Boolean));
+  const accountKeys = new Set(account.map((shop) => `${shop.id}::${shop.name}`));
+  const manual = (Array.isArray(existing) ? existing : [])
+    .filter((shop) => {
+      if (!shop || shop.source === 'account' || shop.demo) return false;
+      const id = clean(shop.id);
+      const name = clean(shop.name);
+      if (!id && !name) return false;
+      if (accountKeys.has(`${id}::${name}`)) return false;
+      if (id && accountIds.has(id)) return false;
+      if (!id && name && accountNames.has(name)) return false;
+      return true;
+    })
+    .map((shop) => ({
+      id: clean(shop.id),
+      name: clean(shop.name),
+      site: shop.site ? String(shop.site) : '',
+      expired: Boolean(shop.expired),
+      source: 'manual',
+    }));
+  return [...account, ...manual];
+}
+
+/** Keep only manually added shops after logout. Drop account shops from the signed-out account. */
+export function shopsAfterLogout(existing) {
+  return (Array.isArray(existing) ? existing : [])
+    .filter((shop) => {
+      if (!shop || shop.demo) return false;
+      if (shop.source === 'account') return false;
+      const id = clean(shop.id);
+      const name = clean(shop.name);
+      return Boolean(id || name);
+    })
+    .map((shop) => ({
+      id: clean(shop.id),
+      name: clean(shop.name),
+      site: shop.site ? String(shop.site) : '',
+      expired: Boolean(shop.expired),
+      source: 'manual',
+    }));
+}
+
+export function isManualShop(shop) {
+  if (!shop || shop.demo) return false;
+  if (shop.source === 'account') return false;
+  return Boolean(clean(shop.id) || clean(shop.name));
+}
+
+export function canRemoveShop(shop) {
+  return isManualShop(shop);
+}
+
+export function sameShop(a, b) {
+  if (!a || !b) return false;
+  const aId = clean(a.id ?? a.shopId);
+  const bId = clean(b.id ?? b.shopId);
+  const aName = clean(a.name ?? a.shopName);
+  const bName = clean(b.name ?? b.shopName);
+  if (aId || bId) return aId === bId;
+  return Boolean(aName && aName === bName);
+}
+
+/** Remove a manual shop from the local list only. Account shops stay. */
+export function removeManualShop(shops, target) {
+  const list = Array.isArray(shops) ? shops.slice() : [];
+  if (!canRemoveShop(target)) return { shops: list, removed: null };
+  let removed = null;
+  const next = list.filter((shop) => {
+    if (!removed && canRemoveShop(shop) && sameShop(shop, target)) {
+      removed = shop;
+      return false;
+    }
+    return true;
+  });
+  return { shops: next, removed };
+}
+
+/** If the current dropdown shop was removed, clear it instead of leaving a stale value. */
+export function selectionAfterRemovingShop(selection, removed) {
+  if (!removed || !sameShop(selection, removed)) {
+    return {
+      shopId: clean(selection?.shopId ?? selection?.id),
+      shopName: clean(selection?.shopName ?? selection?.name),
+    };
+  }
+  return { shopId: '', shopName: '' };
+}

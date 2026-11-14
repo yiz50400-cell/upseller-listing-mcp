@@ -1,0 +1,81 @@
+name: Desktop trial
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main", "desktop-trial/**", "feature/**", "feat/**"]
+    paths:
+      - "desktop/**"
+      - "mcp/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/desktop-windows.yml"
+  pull_request:
+    paths:
+      - "desktop/**"
+      - "mcp/**"
+      - "scripts/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/desktop-windows.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm test
+        working-directory: desktop
+
+  build-windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm ci
+        working-directory: desktop
+      - run: npm run build:win
+        working-directory: desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: upseller-listing-trial-win-x64
+          path: desktop/dist/*.exe
+          if-no-files-found: error
+
+  build-mac:
+    needs: test
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm ci
+        working-directory: desktop
+      - run: npm run build:mac:all
+        working-directory: desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: upseller-listing-trial-mac
+          path: |
+            desktop/dist/*.dmg
+            desktop/dist/*.zip
+          if-no-files-found: error
